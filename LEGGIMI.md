@@ -1,4 +1,4 @@
-# Orbital OM 00 — Telemetria di Star Citizen su schermo secondario
+# Telemetria SC — Telemetria di Star Citizen su schermo secondario
 
 Mostra in tempo reale, su un secondo monitor (o telefono/tablet):
 
@@ -31,7 +31,7 @@ non legge la sua memoria: usa solo la telemetria che il gioco stesso offre e il 
 
 1. **Node.js** versione LTS: scaricalo da <https://nodejs.org> e installalo (avanti, avanti, fine).
 2. **Questo progetto** sul PC: dalla pagina GitHub del repository, pulsante verde **Code → Download ZIP**,
-   poi estrai la cartella dove vuoi (es. `Documenti\orbital-om00`).
+   poi estrai la cartella dove vuoi (es. `Documenti\telemetria-sc`).
 
 ## 2. Attivare la telemetria nel gioco
 

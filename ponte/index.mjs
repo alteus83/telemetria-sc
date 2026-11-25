@@ -1,5 +1,5 @@
 // ============================================================
-// Orbital OM 00 — Ponte telemetria
+// Telemetria SC — Ponte
 // Gira sul PC dove giochi. Raccoglie:
 //   - telemetria del gioco (gRPC locale)
 //   - dati del server dal Game.log (IP, shard, regione, sessione)
@@ -171,7 +171,7 @@ serverWeb.on("error", (e) => {
 });
 serverWeb.listen(config.portaWeb, host, () => {
   console.log("============================================");
-  console.log(" ORBITAL OM 00 — Ponte telemetria" + (modoDemo ? " (DEMO)" : ""));
+  console.log(" TELEMETRIA SC — Ponte" + (modoDemo ? " (DEMO)" : ""));
   console.log("============================================");
   console.log(` Apri sullo schermo secondario:  http://localhost:${config.portaWeb}`);
   if (!modoDemo) {

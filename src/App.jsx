@@ -261,7 +261,7 @@ export default function App() {
     <div className="schermo">
       <header className="testata">
         <div className="testata-titolo">
-          ORBITAL OM 00 <span className="testata-sotto">TELEMETRIA</span>
+          TELEMETRIA SC <span className="testata-sotto">STAR CITIZEN</span>
           {dati?.demo && <span className="badge-demo">DEMO</span>}
         </div>
         <div className="testata-stato">

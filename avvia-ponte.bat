@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Orbital OM 00 - Ponte telemetria
+title Telemetria SC - Ponte
 cd /d "%~dp0"
 
 where node >nul 2>nul

@@ -1,11 +1,160 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-html, body, #root {
-  height: 100%;
+/* Orbital OM 00 — stile "console di bordo" */
+:root {
+  --sfondo: #06111f;
+  --pannello: #0b1f36;
+  --bordo: #1d4a72;
+  --testo: #a9e8ff;
+  --tenue: #5f8fb0;
+  --accento: #4fd8ff;
+  --ok: #5cf2c4;
+  --attenzione: #ffb547;
+  --critico: #ff5d6c;
+  --spento: #2f4f6b;
+  --font: "Share Tech Mono", ui-monospace, Consolas, monospace;
+  --font-numeri: "VT323", "Share Tech Mono", ui-monospace, monospace;
 }
 
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
 body {
   margin: 0;
+  background: var(--sfondo);
+  color: var(--testo);
+  font-family: var(--font);
+  letter-spacing: 0.04em;
+  -webkit-font-smoothing: antialiased;
+}
+
+.schermo {
+  min-height: 100%;
+  padding: 14px 16px 20px;
+  /* righe orizzontali leggere, effetto monitor */
+  background-image: repeating-linear-gradient(0deg, rgba(79, 216, 255, 0.025) 0 1px, transparent 1px 3px);
+}
+
+/* ---------- Testata ---------- */
+.testata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bordo);
+  margin-bottom: 14px;
+}
+.testata-titolo { font-size: 20px; color: var(--accento); font-weight: bold; }
+.testata-sotto { color: var(--tenue); font-weight: normal; margin-left: 8px; }
+.badge-demo {
+  margin-left: 10px; padding: 2px 8px; font-size: 13px;
+  border: 1px solid var(--attenzione); color: var(--attenzione); border-radius: 3px;
+}
+.testata-stato { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 14px; }
+.indicatore { display: inline-flex; align-items: center; gap: 6px; }
+.indicatore-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--spento); }
+.indicatore-on { color: var(--testo); }
+.indicatore-on .indicatore-punto { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.indicatore-off { color: var(--tenue); }
+.indicatore-off .indicatore-punto { background: var(--critico); }
+.orologio { font-family: var(--font-numeri); font-size: 24px; color: var(--accento); }
+
+.avviso {
+  border: 1px solid var(--critico); color: var(--critico); background: rgba(255, 93, 108, 0.08);
+  padding: 10px 14px; margin-bottom: 14px; border-radius: 4px; line-height: 1.5;
+}
+.avviso-lieve { border-color: var(--attenzione); color: var(--attenzione); background: rgba(255, 181, 71, 0.07); }
+.avviso code { background: rgba(255, 255, 255, 0.06); padding: 1px 6px; margin: 0 4px; border-radius: 3px; }
+
+/* ---------- Griglia pannelli ---------- */
+.griglia {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.largo { grid-column: 1 / -1; }
+
+.pannello {
+  background: var(--pannello);
+  border: 1px solid var(--bordo);
+  border-radius: 6px;
+  min-width: 0;
+}
+.pannello-titolo {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--bordo);
+  color: var(--accento); font-weight: bold; font-size: 16px;
+}
+.pannello-extra { color: var(--attenzione); font-size: 13px; font-weight: normal; align-self: center; }
+.pannello-corpo { padding: 10px 12px 12px; }
+.in-attesa { color: var(--tenue); margin: 4px 0; font-size: 14px; }
+
+.riga { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 15px; }
+.riga-etichetta { color: var(--tenue); white-space: nowrap; }
+.riga-valore { text-align: right; overflow-wrap: anywhere; }
+
+.tono-ok { color: var(--ok); }
+.tono-attenzione { color: var(--attenzione); }
+.tono-critico { color: var(--critico); }
+.tono-spento { color: var(--tenue); }
+.tono-sfondo-ok { background: var(--accento); box-shadow: 0 0 6px rgba(79, 216, 255, 0.5); }
+.tono-sfondo-attenzione { background: var(--attenzione); }
+.tono-sfondo-critico { background: var(--critico); }
+
+.nave-nome { font-family: var(--font-numeri); font-size: 34px; margin: 0 0 6px; color: #fff; line-height: 1; }
+.grande-valore { font-family: var(--font-numeri); font-size: 52px; color: #fff; line-height: 1; margin-bottom: 6px; }
+.grande-valore small, .ping-valore small { font-size: 0.4em; color: var(--tenue); margin-left: 6px; }
+
+/* ---------- Barre ---------- */
+.barra { display: grid; grid-template-columns: 92px 1fr 48px; align-items: center; gap: 10px; padding: 4px 0; font-size: 15px; }
+.barra-binario { height: 12px; background: rgba(79, 216, 255, 0.08); border: 1px solid var(--bordo); border-radius: 2px; overflow: hidden; }
+.barra-riempimento { height: 100%; transition: width 0.25s linear; }
+.barra-valore { text-align: right; }
+.facce-scudi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.faccia { text-align: center; font-size: 12px; border: 1px solid var(--accento); border-radius: 3px; padding: 2px 0; }
+
+/* ---------- Spie e sigle ---------- */
+.griglia-spie { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.spia {
+  text-align: center; padding: 6px 2px; font-size: 14px; font-weight: bold;
+  border: 1px solid var(--bordo); border-radius: 3px;
+}
+.spia-ok { border-color: var(--accento); color: var(--accento); }
+.spia-spenta { color: var(--spento); }
+.spia-lieve { background: var(--attenzione); border-color: var(--attenzione); color: #1b1200; }
+.spia-grave { background: var(--critico); border-color: var(--critico); color: #1f0005; }
+.lampeggia { animation: lampeggio 0.8s steps(1) infinite; }
+@keyframes lampeggio { 50% { opacity: 0.25; } }
+
+.gruppo-sigle { display: grid; grid-template-columns: 48px 1fr; gap: 8px; align-items: start; margin-bottom: 8px; }
+.gruppo-sigle .riga-etichetta { padding-top: 3px; }
+.sigle { display: flex; flex-wrap: wrap; gap: 5px; }
+.sigla { padding: 2px 6px; border-radius: 3px; font-size: 14px; border: 1px solid transparent; }
+.sigla-on { color: var(--accento); border-color: var(--bordo); }
+.sigla-off { color: var(--spento); }
+.sigla-assente { color: var(--spento); text-decoration: line-through; }
+
+/* ---------- Server e ping ---------- */
+.server-griglia { display: grid; grid-template-columns: 170px minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+.ping-blocco { display: flex; flex-direction: column; gap: 2px; }
+.ping-etichetta { color: var(--tenue); font-size: 14px; }
+.ping-valore { font-family: var(--font-numeri); font-size: 72px; line-height: 0.9; }
+.ping-perdita { color: var(--tenue); font-size: 13px; }
+.grafico { width: 100%; height: 110px; border: 1px solid var(--bordo); border-radius: 3px; background: rgba(0, 0, 0, 0.15); }
+.grafico-griglia { stroke: var(--bordo); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 2 4; }
+.grafico-linea { fill: none; stroke: var(--accento); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.grafico-punto { fill: var(--accento); }
+.grafico-perdita { stroke: var(--critico); stroke-width: 2; vector-effect: non-scaling-stroke; opacity: 0.7; }
+
+/* ---------- Eventi ---------- */
+.registro { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.registro li { padding: 3px 0; border-bottom: 1px dashed rgba(29, 74, 114, 0.6); }
+.registro li:last-child { border-bottom: 0; }
+.registro-ora { color: var(--tenue); margin-right: 6px; }
+
+/* ---------- Schermi stretti (telefono) ---------- */
+@media (max-width: 760px) {
+  .server-griglia { grid-template-columns: 1fr; }
+  .griglia { grid-template-columns: 1fr; }
+  .ping-valore { font-size: 60px; }
 }

@@ -1,0 +1,29 @@
+Verse Data Gateway
+Copyright 2026 Verse Data Gateway contributors
+
+This is an independent community project, not affiliated with, endorsed by,
+sponsored by, or supported by Cloud Imperium Games.
+Star Citizen and related marks belong to their respective owners.
+
+The telemetry protocol definitions describe a reconstructed interoperability
+interface checked against embedded descriptors in Star Citizen PTU
+5.0.202.10025, changelist 13248297.
+They are not an official SDK or a representation of permission from the game
+publisher. This project's license does not grant rights to third-party game
+assets or trademarks. No game binaries or live gameplay logs are distributed.
+
+gRPC .NET (Grpc.Net.Client, Grpc.Net.Common, Grpc.Core.Api):
+Copyright 2019 The gRPC Authors. Licensed under Apache-2.0; see LICENSE.
+
+Google.Protobuf:
+Copyright 2015, Google Inc. Licensed under BSD-3-Clause; see
+docs/licenses/Google.Protobuf.txt for the upstream license and notices.
+
+QRCoder:
+Copyright 2013-2018 Raffael Herrmann. Licensed under MIT; see
+docs/licenses/QRCoder.txt for the upstream license.
+
+Microsoft .NET runtime, Windows Desktop runtime, Microsoft.Extensions
+abstractions, and System.Security.Cryptography.ProtectedData:
+Licensed under MIT, with component-specific third-party notices.
+See docs/licenses/ and docs/THIRD-PARTY.md.

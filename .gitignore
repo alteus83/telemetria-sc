@@ -1,0 +1,4 @@
+node_modules/
+dist/
+ponte/config.json
+*.log

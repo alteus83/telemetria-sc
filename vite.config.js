@@ -3,4 +3,11 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    // In sviluppo (npm run dev) i dati arrivano dal ponte avviato a parte.
+    proxy: {
+      "/ws": { target: "ws://127.0.0.1:8787", ws: true },
+      "/api": "http://127.0.0.1:8787",
+    },
+  },
 });

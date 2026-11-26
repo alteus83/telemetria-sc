@@ -13,7 +13,7 @@ const METODI_PING = {
   icmp: "DIRETTO",
   tcp: "STIMA · TCP",
   datacenter: "STIMA · DATACENTER",
-  rete: "STIMA · NODO DI RETE",
+  rete: "SERVER NON MISURABILE",
 };
 
 const TRADUZIONI = {
@@ -69,24 +69,32 @@ const tonoPing = (ms) => (ms == null ? "spento" : ms < 80 ? "ok" : ms < 150 ? "a
 
 function Server({ server, ping }) {
   const perdita = ping.tentativi ? ping.perdite / ping.tentativi : null;
-  const tono = tonoPing(ping.ms);
+  // "rete" misura solo fino all'ingresso nella rete Google, non fino al server:
+  // non lo mostriamo come ping (sarebbe molto più basso del reale per server lontani).
+  const soloRete = ping.metodo === "rete";
+  const msPing = soloRete ? null : ping.ms;
+  const tono = tonoPing(msPing);
   return (
     <Cornice titolo="SERVER" extra={METODI_PING[ping.metodo] ?? (ping.ricerca ? "RICERCA…" : null)} className="c-server">
       <div className="ping-zona">
         <Quadrante
-          valore={ping.ms}
+          valore={msPing}
           max={300}
           tacche={12}
           lancetta={false}
           tono={tono}
           zone={[{ da: 0, a: 80, tono: "ok" }, { da: 80, a: 150, tono: "attenzione" }, { da: 150, a: 300, tono: "critico" }]}
         >
-          <text x="110" y="128" className={`quadrante-numero tono-${tono}`}>{ping.ms ?? "---"}</text>
-          <text x="110" y="150" className="quadrante-unita">MS · PING</text>
+          <text x="110" y="128" className={`quadrante-numero tono-${tono}`}>{msPing ?? "---"}</text>
+          <text x="110" y="150" className="quadrante-unita">{ping.metodo && ping.metodo !== "icmp" && !soloRete ? "MS · STIMATO" : "MS · PING"}</text>
         </Quadrante>
         <div className="ping-lato">
           <Dato etichetta="PERSI" valore={ping.metodo ? percento(perdita) : trattino} tono={perdita > 0.05 ? "attenzione" : null} />
-          <Dato etichetta="VERSO" valore={ping.dettaglio ?? (server.ip ? "server" : null)} />
+          {soloRete ? (
+            <Dato etichetta="RETE FINO A GOOGLE" valore={ping.ms == null ? null : `${ping.ms} ms`} />
+          ) : (
+            <Dato etichetta="VERSO" valore={ping.dettaglio ?? (server.ip ? "server" : null)} />
+          )}
           <GraficoPing storico={ping.storico} />
         </div>
       </div>

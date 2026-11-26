@@ -38,8 +38,9 @@ Non serve installare nient'altro (niente Node.js, niente comandi).
 |---|---|
 | **Avvia all'accensione del PC** | Se attiva, l'app parte da sola con Windows (nascosta nell'icona). Puoi attivarla o spegnerla quando vuoi |
 | **Apri la schermata quando parte il gioco** | Apre e chiude la schermata insieme a Star Citizen |
-| **LIVE / PTU** | Quale versione del gioco leggere |
-| **Cartella del gioco** | Quella che contiene `LIVE` e `PTU` (es. `C:\Giochi\StarCitizen`). L'app prova a trovarla da sola; altrimenti premi **Sfoglia…** |
+| **AUTOMATICA / LIVE / PTU** | Con **AUTOMATICA** (predefinita) l'app capisce da sola se hai avviato la LIVE o la PTU guardando da quale cartella parte il gioco, e legge il `Game.log` giusto. LIVE o PTU servono solo per forzarne una |
+| **Cartella del gioco** | Quella che contiene `LIVE` e `PTU` (es. `C:\Giochi\StarCitizen`). Con la scelta automatica viene aggiornata da sola all'avvio del gioco; altrimenti premi **Sfoglia…** |
+| **Attiva telemetria nel gioco** | Fa da solo i passi del punto 3 (variabile di Windows e `user.cfg`, con copia di sicurezza) |
 | **Monitor** | Su quale schermo aprire la schermata |
 | **Schermo intero** | Nella schermata: **F11** attiva/disattiva, **Esc** esce dallo schermo intero |
 
@@ -96,10 +97,25 @@ I dati arrivano **solo quando il personaggio è in gioco** (non nel menu).
 
 ## 5. Note sul ping
 
-- L'app usa il normale comando `ping` di Windows verso il server di gioco.
-- Alcuni server **non rispondono al ping**: in quel caso l'app passa da sola a una stima
-  basata sul tempo di risposta del server, e sulla schermata compare **"ping stimato (TCP)"**.
-- Il valore può differire da quello di `r_displayinfo` nel gioco, che non è accessibile dall'esterno.
+I server di Star Citizen (su Google Cloud) di solito **non rispondono** a misure dall'esterno.
+L'app prova questi metodi in ordine e si ferma sul primo che funziona (in alto a destra del
+pannello SERVER compare quale):
+
+1. **DIRETTO**: il normale `ping` di Windows.
+2. **STIMA · TCP**: tempo di risposta a una richiesta di connessione.
+3. **STIMA · DATACENTER**: dall'IP del server ricava il datacenter Google (elenco ufficiale di
+   Google) e misura il punto di test pubblico "gcping" nello stesso datacenter.
+4. **SERVER NON MISURABILE**: se nient'altro funziona, il ping resta `---` e viene mostrato solo
+   il tempo **fino all'ingresso nella rete Google** ("RETE FINO A GOOGLE"): utile per vedere se la
+   tua connessione è stabile, ma **non** è il ping verso il server.
+
+Il registro dell'app (punto 6) dice perché un metodo non ha funzionato.
+Il valore può differire da quello di `r_displayinfo` nel gioco, che non è accessibile dall'esterno.
+
+## Aggiornamenti
+
+Dalla versione 2.1.1 l'app si aggiorna da sola: controlla all'avvio e ogni 4 ore, scarica la
+nuova versione in silenzio e la installa con un clic sull'avviso (o quando chiudi l'app).
 
 ## 6. Se qualcosa non va
 

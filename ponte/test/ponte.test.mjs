@@ -195,3 +195,13 @@ test("user.cfg: aggiunge e corregge le righe senza toccare il resto", async () =
   assert.equal(aggiornaTestoUserCfg(dopo, "LIVE"), dopo, "seconda volta: nessuna modifica");
   assert.match(aggiornaTestoUserCfg("", "PTU"), /grpc\.client\.server\.port = 29420/);
 });
+
+test("Canale: riconosce LIVE e PTU dal percorso dell'eseguibile", async () => {
+  const { canaleDaPercorso } = await import("../processo.mjs");
+  const ptu = canaleDaPercorso("C:\\Giochi\\StarCitizen\\PTU\\Bin64\\StarCitizen.exe");
+  assert.equal(ptu.canale, "PTU");
+  assert.equal(ptu.cartellaGioco, "C:\\Giochi\\StarCitizen");
+  assert.equal(ptu.gameLog, "C:\\Giochi\\StarCitizen\\PTU\\Game.log");
+  assert.equal(canaleDaPercorso("C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen.exe").canale, "LIVE");
+  assert.equal(canaleDaPercorso(null), null);
+});

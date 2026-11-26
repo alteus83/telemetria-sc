@@ -64,8 +64,9 @@ function configPonte() {
     portaWeb: imp.portaWeb,
     apriInRete: false,
     gameLog: percorsoGameLog(imp),
+    versione: imp.versione,
     telemetriaHost: "127.0.0.1",
-    telemetriaPorte: imp.versione === "PTU" ? [29420, 2942, 50051] : [2942, 29420, 50051],
+    telemetriaPorte: imp.versione === "LIVE" ? [2942, 29420, 50051] : [29420, 2942, 50051],
     intervalloPing: 2000,
     aggiornamentiAlSecondo: 10,
   };
@@ -108,8 +109,14 @@ async function avvio() {
     primaDiInstallare: () => ponte?.chiudi(),
   });
 
-  gioco = avviaControlloGioco(3000, (aperto) => {
+  gioco = avviaControlloGioco(3000, (aperto, info) => {
     scrivi(aperto ? "Star Citizen aperto" : aperto === false ? "Star Citizen chiuso" : "Stato del gioco sconosciuto");
+    if (aperto && info) {
+      scrivi(`Avviato dalla cartella ${info.cartellaCanale} (canale ${info.canale})`);
+      applicaCanaleRilevato(info);
+    } else if (aperto) {
+      scrivi("Non sono riuscito a capire da quale cartella è partito il gioco");
+    }
     aggiornaTray();
     if (!imp.aperturaAutomatica) return;
     if (aperto) apriSchermata();
@@ -118,6 +125,16 @@ async function avvio() {
 
   // Aperta a mano (non all'accensione del PC): mostriamo le impostazioni.
   if (!process.argv.includes(ARG_NASCOSTA)) apriImpostazioni();
+}
+
+// Scelta automatica: usa il canale (LIVE/PTU/...) da cui è partito il gioco.
+function applicaCanaleRilevato(info) {
+  if (imp.canale !== "AUTO") return;
+  if (imp.versione === info.canale && imp.cartellaGioco === info.cartellaGioco) return;
+  imp = { ...imp, versione: info.canale, cartellaGioco: info.cartellaGioco };
+  archivio.salva(imp);
+  scrivi(`Passo automaticamente a ${info.canale}: ${percorsoGameLog(imp)}`);
+  ponte.aggiornaConfig(configPonte());
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +311,7 @@ async function datiPerImpostazioni() {
     monitorAttuale: monitorScelto().id,
     gameLog: { percorso: gameLog, trovato: !!gameLog && fs.existsSync(gameLog) },
     gioco: gioco.aperto,
+    canaleRilevato: gioco.info?.canale ?? null,
     versioneApp: app.getVersion(),
     fileImpostazioni: archivio.file,
     fileRegistro,
@@ -306,12 +324,15 @@ ipcMain.handle("imp:salva", (_e, modifiche) => {
   const prima = imp;
   const ammesse = Object.fromEntries(
     Object.entries(modifiche ?? {}).filter(([k]) =>
-      ["avvioConPC", "aperturaAutomatica", "schermoIntero", "versione", "cartellaGioco", "monitorId"].includes(k)
+      ["avvioConPC", "aperturaAutomatica", "schermoIntero", "canale", "cartellaGioco", "monitorId"].includes(k)
     )
   );
   if ("cartellaGioco" in ammesse) ammesse.cartellaGioco = normalizzaCartella(ammesse.cartellaGioco);
-  if ("versione" in ammesse && !["LIVE", "PTU"].includes(ammesse.versione)) delete ammesse.versione;
+  if ("canale" in ammesse && !["AUTO", "LIVE", "PTU"].includes(ammesse.canale)) delete ammesse.canale;
   imp = { ...imp, ...ammesse };
+  // Canale scelto a mano: lo usiamo subito. Automatico: quello del gioco aperto, se c'è.
+  if (imp.canale !== "AUTO") imp.versione = imp.canale;
+  else if (gioco.info) imp = { ...imp, versione: gioco.info.canale, cartellaGioco: gioco.info.cartellaGioco };
   archivio.salva(imp);
   scrivi(`Impostazioni salvate: ${JSON.stringify(ammesse)}`);
 

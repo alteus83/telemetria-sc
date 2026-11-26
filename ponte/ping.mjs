@@ -68,7 +68,7 @@ function tracert(ip) {
   });
 }
 
-export function avviaMisuraPing(ottieniServer, intervallo) {
+export function avviaMisuraPing(ottieniServer, intervallo, scrivi = () => {}) {
   const stato = {
     ms: null,
     metodo: null, // "icmp" | "tcp" | "datacenter" | "rete" | null
@@ -114,16 +114,23 @@ export function avviaMisuraPing(ottieniServer, intervallo) {
     if (nomeFase === "datacenter" && datacenter === null) {
       preparazione ??= trovaDatacenter(ip)
         .then(async (d) => {
-          datacenter = d ?? false;
-          if (d) await misuraDatacenter(d.url); // la prima apre la connessione: non la contiamo
+          datacenter = d;
+          scrivi(`Ping: datacenter del server ${d.regione} (${d.nome}), punto di test ${d.url}`);
+          await misuraDatacenter(d.url); // la prima apre la connessione: non la contiamo
         })
-        .catch(() => (datacenter = false))
+        .catch((e) => {
+          datacenter = false;
+          scrivi(`Ping: metodo datacenter non disponibile: ${e.message}`);
+        })
         .finally(() => (preparazione = null));
       return false;
     }
     if (nomeFase === "rete" && nodo === null) {
       preparazione ??= tracert(ip)
-        .then((n) => (nodo = n ?? false))
+        .then((n) => {
+          nodo = n ?? false;
+          scrivi(n ? `Ping: ultimo nodo di rete raggiungibile ${n}` : "Ping: tracert non ha trovato nodi raggiungibili");
+        })
         .catch(() => (nodo = false))
         .finally(() => (preparazione = null));
       return false;
@@ -165,8 +172,10 @@ export function avviaMisuraPing(ottieniServer, intervallo) {
       // Fase non utilizzabile o mai riuscita dopo alcuni tentativi: passiamo alla successiva.
       if (r.saltaFase || (r.ms === null && successiFase === 0 && tentativiFase + 1 >= TENTATIVI_PER_FASE)) {
         if (fase < FASI.length - 1) {
+          scrivi(`Ping: il metodo "${nomeFase}" non funziona verso ${ip}, provo "${FASI[fase + 1]}"`);
           fase += 1;
         } else {
+          scrivi(`Ping: nessun metodo funziona verso ${ip}, riprovo da capo`);
           // Nessun metodo ha funzionato: lo segnaliamo e ricominciamo da capo.
           stato.ricerca = false;
           stato.metodo = null;
@@ -182,6 +191,7 @@ export function avviaMisuraPing(ottieniServer, intervallo) {
 
       tentativiFase += 1;
       if (r.ms !== null) {
+        if (successiFase === 0) scrivi(`Ping: uso il metodo "${nomeFase}" (${r.ms} ms)`);
         successiFase += 1;
         stato.ricerca = false;
         stato.metodo = nomeFase;

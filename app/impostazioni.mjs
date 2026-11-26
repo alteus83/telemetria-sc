@@ -8,7 +8,8 @@ export const PREDEFINITE = {
   avvioConPC: false, // parte all'accensione del PC (scelta dell'utente)
   aperturaAutomatica: true, // apre/chiude la schermata con il gioco
   schermoIntero: true,
-  versione: "LIVE", // "LIVE" oppure "PTU"
+  canale: "AUTO", // scelta dell'utente: "AUTO" (riconosce da solo), "LIVE" o "PTU"
+  versione: "LIVE", // canale in uso adesso (LIVE, PTU, EPTU...): l'ultimo riconosciuto o quello scelto
   cartellaGioco: null, // es. C:\Giochi\StarCitizen (null = da cercare)
   monitorId: null, // id del monitor scelto (null = il secondo, se c'è)
   portaWeb: 8787,
@@ -38,14 +39,14 @@ export function cercaCartellaGioco() {
 
 export function percorsoGameLog(imp) {
   if (!imp.cartellaGioco) return "";
-  return path.join(imp.cartellaGioco, imp.versione === "PTU" ? "PTU" : "LIVE", "Game.log");
+  return path.join(imp.cartellaGioco, imp.versione || "LIVE", "Game.log");
 }
 
 // Accetta sia la cartella principale sia una sottocartella LIVE/PTU scelta per sbaglio.
 export function normalizzaCartella(scelta) {
   if (!scelta) return null;
   const base = path.basename(scelta).toUpperCase();
-  return base === "LIVE" || base === "PTU" ? path.dirname(scelta) : scelta;
+  return ["LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"].includes(base) ? path.dirname(scelta) : scelta;
 }
 
 export function creaArchivio(cartellaDati) {
@@ -59,6 +60,8 @@ export function creaArchivio(cartellaDati) {
       /* prima apertura o file rovinato: si usano le predefinite */
     }
     const imp = { ...PREDEFINITE, ...salvate };
+    // Versioni fino alla 2.1.x non avevano la scelta automatica: la attiviamo.
+    if (!("canale" in salvate)) imp.canale = "AUTO";
     if (!imp.cartellaGioco) imp.cartellaGioco = cercaCartellaGioco();
     return imp;
   }

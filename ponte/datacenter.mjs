@@ -93,10 +93,23 @@ function endpoints() {
 
 // Restituisce { regione, nome, url } oppure null se non si riesce.
 export async function trovaDatacenter(ip) {
-  const regione = regioneDaElenco(await regioni(), ip);
-  if (!regione) return null;
-  const punto = puntoDiTest(await endpoints(), regione);
-  return punto ? { regione, ...punto } : null;
+  let elenco;
+  try {
+    elenco = await regioni();
+  } catch (e) {
+    throw new Error(`elenco IP di Google non scaricabile (${e.message})`);
+  }
+  const regione = regioneDaElenco(elenco, ip);
+  if (!regione) throw new Error(`l'IP ${ip} non risulta tra i datacenter Google Cloud`);
+  let ep;
+  try {
+    ep = await endpoints();
+  } catch (e) {
+    throw new Error(`regione ${regione} trovata, ma l'elenco dei punti di test gcping non è scaricabile (${e.message})`);
+  }
+  const punto = puntoDiTest(ep, regione);
+  if (!punto) throw new Error(`regione ${regione} trovata, ma gcping non ha un punto di test per quella regione`);
+  return { regione, ...punto };
 }
 
 // Tempo fino all'inizio della risposta, sulla connessione già aperta.

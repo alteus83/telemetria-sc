@@ -20,7 +20,7 @@ function esegui(cmd, argomenti) {
 export function righeUserCfg(versione) {
   return {
     "grpc.client.server.enabled": "1",
-    "grpc.client.server.port": versione === "PTU" ? "29420" : "2942",
+    "grpc.client.server.port": versione === "LIVE" ? "2942" : "29420",
     "grpc.client.server.external": "0",
     "server.game.telemetry.enabled": "1",
   };
@@ -47,7 +47,7 @@ export function aggiornaTestoUserCfg(testo, versione) {
 }
 
 function percorsoUserCfg(imp) {
-  return imp.cartellaGioco ? path.join(imp.cartellaGioco, imp.versione === "PTU" ? "PTU" : "LIVE", "user.cfg") : null;
+  return imp.cartellaGioco ? path.join(imp.cartellaGioco, imp.versione || "LIVE", "user.cfg") : null;
 }
 
 export async function statoTelemetriaGioco(imp) {

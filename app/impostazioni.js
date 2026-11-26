@@ -51,6 +51,14 @@ function mostraStato(d) {
     log.className = "stato no";
     log.textContent = `✗ Game.log non trovato in ${imp.versione}. Avvia il gioco almeno una volta o controlla la cartella.`;
   }
+  const cu = $("canaleInUso");
+  if (imp.canale === "AUTO") {
+    cu.textContent = d.canaleRilevato
+      ? `Riconosciuta dal gioco aperto: ${d.canaleRilevato}`
+      : `Si sceglie da sola quando avvii il gioco (ultima usata: ${imp.versione})`;
+  } else {
+    cu.textContent = `Forzata su ${imp.canale}`;
+  }
   const g = $("statoGioco");
   g.textContent = d.gioco === true ? "Star Citizen aperto" : d.gioco === false ? "Star Citizen chiuso" : "stato del gioco sconosciuto";
   g.className = d.gioco === true ? "ok" : "neutro";
@@ -62,7 +70,7 @@ function mostra(d) {
   $("avvioConPC").checked = !!imp.avvioConPC;
   $("aperturaAutomatica").checked = !!imp.aperturaAutomatica;
   $("schermoIntero").checked = !!imp.schermoIntero;
-  for (const r of document.querySelectorAll('input[name="versione"]')) r.checked = r.value === imp.versione;
+  for (const r of document.querySelectorAll('input[name="canale"]')) r.checked = r.value === imp.canale;
 
   $("cartellaGioco").textContent = imp.cartellaGioco || "Cartella non trovata: premi Sfoglia…";
 
@@ -87,8 +95,8 @@ async function salva(modifiche) {
 $("avvioConPC").addEventListener("change", (e) => salva({ avvioConPC: e.target.checked }));
 $("aperturaAutomatica").addEventListener("change", (e) => salva({ aperturaAutomatica: e.target.checked }));
 $("schermoIntero").addEventListener("change", (e) => salva({ schermoIntero: e.target.checked }));
-for (const r of document.querySelectorAll('input[name="versione"]')) {
-  r.addEventListener("change", (e) => salva({ versione: e.target.value }));
+for (const r of document.querySelectorAll('input[name="canale"]')) {
+  r.addEventListener("change", (e) => salva({ canale: e.target.value }));
 }
 $("monitor").addEventListener("change", (e) => salva({ monitorId: Number(e.target.value) }));
 $("sfoglia").addEventListener("click", async () => {

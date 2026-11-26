@@ -99,9 +99,11 @@
       <section>
         <h2>GIOCO</h2>
         <div class="scelta" role="radiogroup" aria-label="Versione del gioco">
-          <label><input type="radio" name="versione" value="LIVE" /><span>LIVE</span></label>
-          <label><input type="radio" name="versione" value="PTU" /><span>PTU</span></label>
+          <label><input type="radio" name="canale" value="AUTO" /><span>AUTOMATICA</span></label>
+          <label><input type="radio" name="canale" value="LIVE" /><span>LIVE</span></label>
+          <label><input type="radio" name="canale" value="PTU" /><span>PTU</span></label>
         </div>
+        <div class="stato neutro" id="canaleInUso">—</div>
         <div class="percorso">
           <code id="cartellaGioco">—</code>
           <button id="sfoglia" type="button">Sfoglia…</button>

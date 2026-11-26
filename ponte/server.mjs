@@ -61,7 +61,8 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
     // non misuriamo il ping verso un server che non stiamo più usando.
     const ping = avviaMisuraPing(
       () => (giocoAperto() === false ? {} : lettore.server),
-      cfg.intervalloPing
+      cfg.intervalloPing,
+      scrivi
     );
     const telemetria = avviaTelemetria({
       host: cfg.telemetriaHost,

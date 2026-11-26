@@ -265,7 +265,9 @@ export default function App() {
           {dati?.demo && <span className="badge-demo">DEMO</span>}
         </div>
         <div className="testata-stato">
-          <Indicatore nome="PONTE" acceso={collegato} titolo="Collegamento tra questa pagina e il programma ponte" />
+          {st?.gioco != null && (
+            <Indicatore nome="GIOCO" acceso={st.gioco} titolo={st.gioco ? "Star Citizen è aperto" : "Star Citizen è chiuso"} />
+          )}
           <Indicatore nome="LOG" acceso={!!st?.log} titolo={st?.erroreLog ?? "Game.log trovato"} />
           <Indicatore
             nome={st?.telemetria ? `TELEMETRIA ${st.pacchettiAlSecondo} PKT/S` : "TELEMETRIA"}
@@ -278,11 +280,20 @@ export default function App() {
 
       {!collegato && (
         <div className="avviso">
-          Ponte non raggiungibile. Sul PC di gioco apri il ponte con <code>npm run ponte</code> (o fai doppio clic su
-          <code>avvia-ponte.bat</code>).
+          Collegamento interrotto con il motore della telemetria. Se usi l'app, riaprila dall'icona vicino
+          all'orologio; se usi il ponte da terminale, avvialo con <code>npm run ponte</code>.
         </div>
       )}
-      {collegato && st && !st.telemetria && (
+      {collegato && st && !st.log && (
+        <div className="avviso">
+          Game.log non trovato{st.percorsoLog ? <> in <code>{st.percorsoLog}</code></> : null}. Controlla la cartella
+          del gioco nelle Impostazioni.
+        </div>
+      )}
+      {collegato && st?.log && st.gioco === false && (
+        <div className="avviso avviso-lieve">Star Citizen è chiuso. I dati compariranno quando avvii il gioco.</div>
+      )}
+      {collegato && st?.log && st.gioco !== false && !st.telemetria && (
         <div className="avviso avviso-lieve">
           Telemetria del gioco non ricevuta. Il gioco deve essere aperto, con il personaggio in gioco e la telemetria
           attivata (vedi LEGGIMI.md). Ping e dati del server funzionano comunque dal Game.log.

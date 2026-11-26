@@ -1,6 +1,6 @@
 # Telemetria SC — Telemetria di Star Citizen su schermo secondario
 
-Mostra in tempo reale, su un secondo monitor (o telefono/tablet):
+Un'app per Windows che mostra in tempo reale, su un secondo monitor:
 
 - **Server**: ping con grafico, pacchetti persi, regione, shard, IP, da quanto sei connesso, build del gioco
 - **Nave**: modello, modalità SCM/NAV, carrello, luci
@@ -10,49 +10,63 @@ Mostra in tempo reale, su un secondo monitor (o telefono/tablet):
 - **Personaggio**: salute, ossigeno, battito, aUEC
 - **Eventi**: ingresso nell'universo, cambio shard, morti, ecc.
 
-## Come funziona
+L'app resta come **icona vicino all'orologio**: quando avvii Star Citizen apre da sola la
+schermata sul monitor scelto, quando chiudi il gioco la chiude.
 
-```
-Star Citizen ──(telemetria locale)──┐
-Game.log ───(server, shard, IP)─────┼──► PONTE (sul PC di gioco) ──► pagina web sullo schermo secondario
-Ping verso il server ───────────────┘
-```
-
-Il **ponte** è un piccolo programma che gira sul PC dove giochi. Non modifica il gioco e
-non legge la sua memoria: usa solo la telemetria che il gioco stesso offre e il file
-`Game.log` che il gioco scrive.
+Non modifica il gioco e non legge la sua memoria: usa solo la telemetria che il gioco
+stesso offre e il file `Game.log` che il gioco scrive.
 
 > ⚠️ La telemetria **non è documentata ufficialmente da CIG** e può cambiare o smettere di
 > funzionare con una patch. Ping e dati del server (dal `Game.log`) funzionano comunque.
 
 ---
 
-## 1. Cosa serve (una volta sola)
+## 1. Installare l'app
 
-1. **Node.js** versione LTS: scaricalo da <https://nodejs.org> e installalo (avanti, avanti, fine).
-2. **Questo progetto** sul PC: dalla pagina GitHub del repository, pulsante verde **Code → Download ZIP**,
-   poi estrai la cartella dove vuoi (es. `Documenti\telemetria-sc`).
+1. Apri la pagina **Releases** del repository:
+   <https://github.com/alteus83/telemetria-sc/releases/latest>
+2. Scarica **`TelemetriaSC-Setup-x.y.z.exe`**.
+3. Aprilo. Windows mostrerà **"PC protetto da Windows"** perché l'app non è firmata
+   digitalmente: clicca **Ulteriori informazioni → Esegui comunque**.
+4. Segui l'installazione. Alla fine si apre la finestra **Impostazioni**.
 
-## 2. Attivare la telemetria nel gioco
+Non serve installare nient'altro (niente Node.js, niente comandi).
 
-### Se giochi in LIVE (4.10.x)
+## 2. Impostazioni
+
+| Voce | A cosa serve |
+|---|---|
+| **Avvia all'accensione del PC** | Se attiva, l'app parte da sola con Windows (nascosta nell'icona). Puoi attivarla o spegnerla quando vuoi |
+| **Apri la schermata quando parte il gioco** | Apre e chiude la schermata insieme a Star Citizen |
+| **LIVE / PTU** | Quale versione del gioco leggere |
+| **Cartella del gioco** | Quella che contiene `LIVE` e `PTU` (es. `C:\Giochi\StarCitizen`). L'app prova a trovarla da sola; altrimenti premi **Sfoglia…** |
+| **Monitor** | Su quale schermo aprire la schermata |
+| **Schermo intero** | Nella schermata: **F11** attiva/disattiva, **Esc** esce dallo schermo intero |
+
+Le impostazioni si salvano subito. Per riaprirle: tasto destro sull'icona vicino
+all'orologio → **Impostazioni…** (oppure riapri l'app dal menu Start).
+
+## 3. Attivare la telemetria nel gioco
+
+Senza questo passo funzionano solo ping e dati del server; con questo passo anche nave,
+volo, sistemi, armi e personaggio.
+
+### LIVE (4.10.x)
 
 1. Apri **PowerShell** (tasto Windows, scrivi `powershell`, Invio).
-2. Incolla questo comando e premi Invio:
+2. Incolla e premi Invio:
    ```
    setx GRPC_CLIENT_SERVER_ENABLED true
    ```
    Deve rispondere `OPERAZIONE RIUSCITA` (o `SUCCESS`).
-3. **Chiudi completamente l'RSI Launcher**, anche dall'icona vicino all'orologio di Windows
-   (tasto destro → Esci). Il comando vale solo per i programmi aperti *dopo*.
-4. Riapri il launcher e avvia il gioco.
+3. **Chiudi completamente l'RSI Launcher**, anche dall'icona vicino all'orologio
+   (tasto destro → Esci), poi riaprilo e avvia il gioco.
 
-Sulla LIVE si possono solo **leggere** i dati (niente comandi verso il gioco).
+Sulla LIVE si possono solo **leggere** i dati.
 
-### Quando uscirà la 5.0 (o se provi la PTU)
+### PTU / 5.0
 
-Nella cartella del gioco (es. `...\StarCitizen\PTU\`) apri o crea il file `user.cfg`
-con il Blocco note e aggiungi:
+Nella cartella `PTU` del gioco apri o crea `user.cfg` con il Blocco note e aggiungi:
 
 ```
 server.game.telemetry.enabled = 1
@@ -60,91 +74,70 @@ grpc.client.server.port = 29420
 grpc.client.server.external = 0
 ```
 
-Ricordati di cambiare anche il percorso del `Game.log` (vedi punto 4).
+e nelle Impostazioni dell'app scegli **PTU**.
 
-### Come verificare che sia attiva
+### Verifica
 
-Apri `Game.log` (nella cartella `LIVE` o `PTU`) e cerca la riga:
+In `Game.log` deve comparire la riga:
 
 ```
 Local services server is running on 127.0.0.1:XXXX
 ```
 
-Se c'è, la telemetria è attiva sulla porta `XXXX`. Il ponte la legge da solo.
-I dati iniziano ad arrivare **solo quando il personaggio è in gioco** (non nel menu).
+I dati arrivano **solo quando il personaggio è in gioco** (non nel menu).
 
-## 3. Avviare il ponte
-
-Doppio clic su **`avvia-ponte.bat`** nella cartella del progetto.
-
-La prima volta installa le librerie e prepara la pagina (un paio di minuti). Poi si apre il
-browser su `http://localhost:8787`: trascina la finestra sul secondo monitor e premi **F11**
-per lo schermo intero.
-
-In alto a destra tre spie ti dicono cosa funziona:
+## 4. Le spie in alto nella schermata
 
 | Spia | Verde significa | Se è rossa |
 |---|---|---|
-| PONTE | la pagina riceve dati dal ponte | il ponte è chiuso: riaprilo |
-| LOG | `Game.log` trovato | percorso sbagliato: vedi punto 4 |
-| TELEMETRIA | il gioco sta inviando dati | gioco chiuso, personaggio non in gioco o telemetria non attiva |
-
-Per chiudere il ponte: nella finestra nera premi **CTRL + C** oppure chiudila.
-
-### Provarlo senza il gioco
-
-Apri un terminale nella cartella del progetto ed esegui:
-
-```
-npm install
-npm run build
-npm run demo
-```
-
-e apri `http://localhost:8787`: vedrai dati simulati (con la scritta DEMO).
-
-## 4. Impostazioni personali
-
-Copia `ponte\config.esempio.json` in `ponte\config.json` e modifica solo quello che serve:
-
-| Chiave | A cosa serve |
-|---|---|
-| `gameLog` | percorso del `Game.log` se hai installato il gioco altrove o usi la PTU. Nei percorsi usa doppie barre `\\` |
-| `apriInRete` | `true` per vedere lo schermo anche da telefono/tablet in casa (indirizzo `http://IP-DEL-PC:8787`). Windows potrebbe chiederti il permesso del firewall |
-| `portaWeb` | se la porta 8787 è già usata da altro |
-| `telemetriaPorte` | porte da provare se il `Game.log` non indica quella della telemetria |
-| `intervalloPing` | ogni quanti millisecondi misurare il ping |
+| GIOCO | Star Citizen è aperto | il gioco è chiuso |
+| LOG | `Game.log` trovato | cartella sbagliata: controlla le Impostazioni |
+| TELEMETRIA | il gioco sta inviando dati | personaggio non in gioco o telemetria non attiva (punto 3) |
 
 ## 5. Note sul ping
 
-- Il ponte usa il normale comando `ping` di Windows verso il server di gioco.
-- Alcuni server **non rispondono al ping**: in quel caso il ponte passa da solo a una stima
-  basata sul tempo di risposta del server, e sullo schermo compare **"ping stimato (TCP)"**.
-  È un valore indicativo, non identico a quello che mostra il gioco.
-- Il valore può differire da quello di `r_displayinfo` nel gioco: quello lo misura il gioco
-  dall'interno e non è accessibile dall'esterno.
+- L'app usa il normale comando `ping` di Windows verso il server di gioco.
+- Alcuni server **non rispondono al ping**: in quel caso l'app passa da sola a una stima
+  basata sul tempo di risposta del server, e sulla schermata compare **"ping stimato (TCP)"**.
+- Il valore può differire da quello di `r_displayinfo` nel gioco, che non è accessibile dall'esterno.
+
+## 6. Se qualcosa non va
+
+L'app scrive un registro in `%APPDATA%\Telemetria SC\registro.txt` (il percorso esatto è in
+fondo alla finestra Impostazioni). Mandalo insieme a uno screenshot.
+
+---
 
 ## Per sviluppatori
 
 | Comando | Cosa fa |
 |---|---|
-| `npm run ponte` | avvia il ponte (serve la pagina già preparata con `npm run build`) |
-| `npm run demo` | avvia il ponte con dati simulati |
+| `npm run app` | avvia l'app (Electron) dal codice |
+| `npm run pacchetto` | crea l'installatore Windows in `release/` (meglio su Windows) |
+| `npm run ponte` | solo il motore, da terminale, con la pagina su `http://localhost:8787` (impostazioni in `ponte/config.json`, vedi `ponte/config.esempio.json`) |
+| `npm run demo` | come sopra, con dati simulati |
 | `npm run dev` | pagina in modalità sviluppo (con il ponte avviato a parte) |
-| `npm test` | test automatici del ponte |
+| `npm test` | test automatici |
+
+A ogni modifica del codice su GitHub, l'automazione `.github/workflows/app-windows.yml`
+costruisce l'installatore su una macchina Windows e lo pubblica nella pagina Releases.
 
 Struttura:
 
 ```
-ponte/            programma ponte (Node.js)
-  index.mjs       server web + flusso dati
+app/              app Windows (Electron): icona, impostazioni, finestre
+ponte/            motore della telemetria (Node.js)
+  server.mjs      server web + flusso dati verso la schermata
   telemetria.mjs  collegamento alla telemetria del gioco
   gamelog.mjs     lettura del Game.log
   ping.mjs        misura del ping
+  processo.mjs    controllo "il gioco è aperto?"
   demo.mjs        dati simulati
+  index.mjs       avvio da terminale
   proto/          definizioni del protocollo di telemetria
   test/           test automatici
-src/              pagina dello schermo (React)
+src/              schermata (React)
+build/            icona per l'installatore
 ```
 
 ## Crediti e licenze

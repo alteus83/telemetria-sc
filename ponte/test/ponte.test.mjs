@@ -111,3 +111,29 @@ test("Telemetria: riceve e converte i dati da un finto gioco", async () => {
   assert.deepEqual(d.eventi, ["Seduto"]);
   assert.equal(stato.porta, porta);
 });
+
+test("Ponte: a gioco chiuso non mostra l'ultimo server del Game.log", async () => {
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const { avviaPonte } = await import("../server.mjs");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tsc-"));
+  const log = path.join(dir, "Game.log");
+  fs.writeFileSync(log, "<Join PU> address[127.0.0.1] port[64090] shard[pub_euw1b_1_1]\n");
+  let aperto = false;
+  const ponte = await avviaPonte({
+    config: { portaWeb: 0, gameLog: log, telemetriaHost: "127.0.0.1", telemetriaPorte: [1], intervalloPing: 60000 },
+    giocoAperto: () => aperto,
+    scrivi: () => {},
+  });
+  try {
+    const chiuso = ponte.istantanea();
+    assert.equal(chiuso.stato.gioco, false);
+    assert.equal(chiuso.server.ip, undefined);
+    aperto = true;
+    const ap = ponte.istantanea();
+    assert.equal(ap.server.ip, "127.0.0.1");
+    assert.equal(ap.server.regione, "Europa Ovest");
+  } finally {
+    ponte.chiudi();
+  }
+});

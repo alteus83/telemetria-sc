@@ -1,24 +1,67 @@
 {
   "name": "telemetria-sc",
+  "productName": "Telemetria SC",
+  "description": "Telemetria di Star Citizen su schermo secondario",
+  "author": "alteus83",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
+  "main": "app/main.mjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "ponte": "node ponte/index.mjs",
     "demo": "node ponte/index.mjs --demo",
+    "app": "vite build && electron .",
+    "pacchetto": "vite build && electron-builder --win nsis --x64 --publish never",
     "test": "node --test ponte/test/ponte.test.mjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.5",
     "@grpc/proto-loader": "^0.7.13",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "vite": "^5.3.1"
+  },
+  "build": {
+    "appId": "it.telemetriasc.app",
+    "productName": "Telemetria SC",
+    "copyright": "Progetto amatoriale, non affiliato a Cloud Imperium Games",
+    "asar": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**",
+      "ponte/**",
+      "!ponte/test/**",
+      "!ponte/config.json",
+      "dist/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "artifactName": "TelemetriaSC-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Telemetria SC",
+      "installerLanguages": ["it_IT"],
+      "language": "1040",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
   }
 }

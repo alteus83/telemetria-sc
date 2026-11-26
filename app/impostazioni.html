@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Telemetria SC — Impostazioni</title>
+    <style>
+      :root {
+        --sfondo: #06111f; --pannello: #0b1f36; --bordo: #1d4a72; --testo: #a9e8ff;
+        --tenue: #6b9cbd; --accento: #4fd8ff; --ok: #5cf2c4; --attenzione: #ffb547; --critico: #ff5d6c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--sfondo); color: var(--testo);
+        font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+      }
+      header { padding: 18px 20px 12px; border-bottom: 1px solid var(--bordo); }
+      h1 { margin: 0; font: bold 20px Consolas, ui-monospace, monospace; letter-spacing: 0.06em; color: var(--accento); }
+      .sotto { color: var(--tenue); font-size: 13px; margin-top: 2px; }
+      main { padding: 16px 20px 24px; display: grid; gap: 14px; }
+      section { background: var(--pannello); border: 1px solid var(--bordo); border-radius: 6px; padding: 12px 14px; }
+      h2 { margin: 0 0 10px; font: bold 13px Consolas, ui-monospace, monospace; letter-spacing: 0.08em; color: var(--accento); }
+      .voce { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+      .voce + .voce { border-top: 1px dashed rgba(29, 74, 114, 0.7); }
+      .voce input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accento); flex: none; }
+      .voce strong { display: block; font-weight: 600; color: #e6f8ff; }
+      .voce span { color: var(--tenue); font-size: 13px; }
+      .scelta { display: flex; gap: 8px; }
+      .scelta label {
+        flex: 1; text-align: center; padding: 7px 0; border: 1px solid var(--bordo); border-radius: 4px; cursor: pointer;
+        font-family: Consolas, ui-monospace, monospace; font-weight: bold;
+      }
+      .scelta input { position: absolute; opacity: 0; pointer-events: none; }
+      .scelta input:checked + span { color: var(--sfondo); }
+      .scelta label:has(input:checked) { background: var(--accento); border-color: var(--accento); color: var(--sfondo); }
+      .scelta label:has(input:focus-visible) { outline: 2px solid var(--testo); outline-offset: 2px; }
+      .percorso {
+        display: flex; gap: 8px; align-items: center; margin-top: 10px;
+      }
+      .percorso code {
+        flex: 1; min-width: 0; overflow-wrap: anywhere; background: rgba(0, 0, 0, 0.25); padding: 6px 8px;
+        border: 1px solid var(--bordo); border-radius: 4px; font-size: 12px;
+      }
+      .stato { margin-top: 8px; font-size: 13px; }
+      .ok { color: var(--ok); } .no { color: var(--critico); } .neutro { color: var(--tenue); }
+      select {
+        width: 100%; padding: 7px 8px; background: rgba(0, 0, 0, 0.25); color: var(--testo);
+        border: 1px solid var(--bordo); border-radius: 4px; font: inherit;
+      }
+      button {
+        background: transparent; color: var(--accento); border: 1px solid var(--accento); border-radius: 4px;
+        padding: 7px 12px; font: bold 13px Consolas, ui-monospace, monospace; letter-spacing: 0.04em; cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover { background: rgba(79, 216, 255, 0.1); }
+      button.principale { background: var(--accento); color: var(--sfondo); width: 100%; padding: 10px; font-size: 14px; }
+      .piede { color: var(--tenue); font-size: 12px; overflow-wrap: anywhere; }
+      #salvato {
+        position: fixed; right: 16px; bottom: 16px; background: var(--ok); color: var(--sfondo); padding: 6px 12px;
+        border-radius: 4px; font-weight: bold; opacity: 0; transition: opacity 0.2s;
+      }
+      #salvato.visibile { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>TELEMETRIA SC</h1>
+      <div class="sotto">Impostazioni · <span id="statoGioco">—</span></div>
+    </header>
+
+    <main>
+      <section>
+        <h2>AVVIO</h2>
+        <label class="voce">
+          <input type="checkbox" id="avvioConPC" />
+          <div>
+            <strong>Avvia all'accensione del PC</strong>
+            <span>L'app parte da sola con Windows e resta come icona vicino all'orologio.</span>
+          </div>
+        </label>
+        <label class="voce">
+          <input type="checkbox" id="aperturaAutomatica" />
+          <div>
+            <strong>Apri la schermata quando parte il gioco</strong>
+            <span>Si apre quando avvii Star Citizen e si chiude quando lo chiudi.</span>
+          </div>
+        </label>
+      </section>
+
+      <section>
+        <h2>GIOCO</h2>
+        <div class="scelta" role="radiogroup" aria-label="Versione del gioco">
+          <label><input type="radio" name="versione" value="LIVE" /><span>LIVE</span></label>
+          <label><input type="radio" name="versione" value="PTU" /><span>PTU</span></label>
+        </div>
+        <div class="percorso">
+          <code id="cartellaGioco">—</code>
+          <button id="sfoglia" type="button">Sfoglia…</button>
+        </div>
+        <div class="stato" id="statoLog">—</div>
+      </section>
+
+      <section>
+        <h2>SCHERMATA</h2>
+        <select id="monitor" aria-label="Monitor della schermata"></select>
+        <label class="voce" style="margin-top: 6px">
+          <input type="checkbox" id="schermoIntero" />
+          <div>
+            <strong>Schermo intero</strong>
+            <span>Nella schermata: F11 attiva o disattiva, Esc esce dallo schermo intero.</span>
+          </div>
+        </label>
+      </section>
+
+      <button class="principale" id="apri" type="button">APRI SCHERMATA ORA</button>
+
+      <div class="piede" id="piede"></div>
+    </main>
+
+    <div id="salvato" role="status">Salvato</div>
+    <script src="impostazioni.js"></script>
+  </body>
+</html>

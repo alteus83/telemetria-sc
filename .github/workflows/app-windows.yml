@@ -1,0 +1,62 @@
+name: Costruisci app Windows
+
+# Ogni volta che il codice cambia, GitHub costruisce l'installatore per Windows
+# su una macchina Windows e lo pubblica nella pagina "Releases" del repository.
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v4
+
+      - name: Prepara Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installa le librerie
+        run: npm ci
+
+      - name: Test automatici
+        run: npm test
+
+      - name: Costruisci l'installatore
+        run: npm run pacchetto
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Leggi la versione
+        id: versione
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Allega l'installatore a questa esecuzione
+        uses: actions/upload-artifact@v4
+        with:
+          name: TelemetriaSC-Setup-${{ steps.versione.outputs.v }}
+          path: release/*.exe
+
+      - name: Pubblica nella pagina Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.versione.outputs.v }}
+          name: Telemetria SC ${{ steps.versione.outputs.v }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: release/*.exe
+          body: |
+            Installatore per Windows di Telemetria SC.
+
+            1. Scarica **TelemetriaSC-Setup-${{ steps.versione.outputs.v }}.exe** qui sotto.
+            2. Aprilo. Se Windows mostra "PC protetto da Windows": **Ulteriori informazioni → Esegui comunque**
+               (l'app non è firmata digitalmente).
+            3. Segui l'installazione. Alla fine si apre la finestra Impostazioni.

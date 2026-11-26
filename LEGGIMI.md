@@ -1,5 +1,7 @@
 # Telemetria SC — Telemetria di Star Citizen su schermo secondario
 
+🇬🇧 **English guide: [README.md](README.md)**
+
 Un'app per Windows che mostra in tempo reale, su un secondo monitor:
 
 - **Server**: ping con grafico, pacchetti persi, regione, shard, IP, da quanto sei connesso, build del gioco
@@ -43,6 +45,7 @@ Non serve installare nient'altro (niente Node.js, niente comandi).
 | **Attiva telemetria nel gioco** | Fa da solo i passi del punto 3 (variabile di Windows e `user.cfg`, con copia di sicurezza) |
 | **Monitor** | Su quale schermo aprire la schermata |
 | **Schermo intero** | Nella schermata: **F11** attiva/disattiva, **Esc** esce dallo schermo intero |
+| **Lingua** | AUTOMATICA (quella di Windows), ITALIANO o ENGLISH: vale per schermata, Impostazioni e menu |
 
 Le impostazioni si salvano subito. Per riaprirle: tasto destro sull'icona vicino
 all'orologio → **Impostazioni…** (oppure riapri l'app dal menu Start).

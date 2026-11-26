@@ -3,9 +3,15 @@
 
 export const trattino = "—";
 
+// Formato dei numeri (virgola o punto per i decimali) secondo la lingua scelta.
+let LOCALE = "it-IT";
+export function impostaLocale(l) {
+  LOCALE = l;
+}
+
 export function numero(v, decimali = 0) {
   if (v == null || !Number.isFinite(v)) return trattino;
-  return v.toLocaleString("it-IT", { minimumFractionDigits: decimali, maximumFractionDigits: decimali });
+  return v.toLocaleString(LOCALE, { minimumFractionDigits: decimali, maximumFractionDigits: decimali });
 }
 export function percento(r) {
   if (r == null || !Number.isFinite(r)) return trattino;
@@ -230,7 +236,7 @@ export function NaveScudi({ nave, massimoVelocita }) {
 // Bussola a nastro (prua)
 // ---------------------------------------------------------------------------
 const CARDINALI = { 0: "N", 90: "E", 180: "S", 270: "O" };
-export function Bussola({ prua, larghezza = 760 }) {
+export function Bussola({ prua, larghezza = 760, cardinali = CARDINALI }) {
   const visibili = 120; // gradi visibili
   const px = larghezza / visibili;
   const segni = [];
@@ -243,8 +249,8 @@ export function Bussola({ prua, larghezza = 760 }) {
       segni.push(<line key={g} x1={x} x2={x} y1={forte ? 26 : 32} y2={42} className={forte ? "tacca forte" : "tacca"} />);
       if (forte)
         segni.push(
-          <text key={`t${g}`} x={x} y={20} className={`bussola-testo ${CARDINALI[norm] ? "cardinale" : ""}`}>
-            {CARDINALI[norm] ?? String(norm).padStart(3, "0")}
+          <text key={`t${g}`} x={x} y={20} className={`bussola-testo ${cardinali[norm] ? "cardinale" : ""}`}>
+            {cardinali[norm] ?? String(norm).padStart(3, "0")}
           </text>
         );
     }

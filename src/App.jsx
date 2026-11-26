@@ -1,28 +1,19 @@
 import { useEffect, useState } from "react";
 import { usePonte } from "./usePonte.js";
+import { TESTI, ContestoLingua, useT, traduciRegione, linguaBrowser } from "./lingua.js";
 import {
   Cornice, Quadrante, Anello, Segmenti, NaveScudi, Bussola, NastroVerticale, Esagono, Targhetta,
-  GraficoPing, Battito, numero, distanza, durata, percento, trattino,
+  GraficoPing, Battito, numero, distanza, durata, percento, trattino, impostaLocale,
 } from "./hud/strumenti.jsx";
 
 const SPIE = ["pwr", "wpn", "thr", "shld", "cool", "qdrv", "radr", "prox", "hit", "misl"];
 const IFCS = ["CPL", "ESP", "GRC", "GSF", "CRU", "LIM", "PRX", "ATT", "STB", "COR", "VNT", "CMD"];
 const POTENZA = ["REA", "MOT", "ARM", "RAF", "VIT", "GRA", "SEN", "GSC", "ESC"];
 
-const METODI_PING = {
-  icmp: "DIRETTO",
-  tcp: "STIMA · TCP",
-  datacenter: "STIMA · DATACENTER",
-  rete: "SERVER NON MISURABILE",
-};
-
-const TRADUZIONI = {
-  SCM: "SCM", NAVIGATION: "NAV", STEALTH: "STEALTH",
-  RETRACTED: "SU", DEPLOYED: "GIÙ", DEPLOYING: "IN DISCESA", RETRACTING: "IN SALITA",
-  SEATED: "SEDUTO", ON_FOOT: "A PIEDI", EVA: "EVA",
-  PILOT: "PILOTA", GUNNER: "ARTIGLIERE", CREW: "EQUIPAGGIO",
-};
-const tr = (v) => (v ? TRADUZIONI[v] ?? v : trattino);
+function useTr() {
+  const T = useT();
+  return (v) => (v ? T.stati[v] ?? v : trattino);
+}
 
 // La schermata è disegnata a 1920×1080 e si adatta a qualsiasi finestra.
 function useScala() {
@@ -36,13 +27,13 @@ function useScala() {
   return s;
 }
 
-function useOrologio() {
+function useOrologio(locale) {
   const [ora, setOra] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setOra(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
-  return ora.toLocaleTimeString("it-IT", { hour12: false });
+  return ora.toLocaleTimeString(locale, { hour12: false });
 }
 
 function Luce({ nome, acceso }) {
@@ -67,7 +58,8 @@ const tonoPing = (ms) => (ms == null ? "spento" : ms < 80 ? "ok" : ms < 150 ? "a
 
 // ---------------------------------------------------------------------------
 
-function Server({ server, ping }) {
+function Server({ server, ping, lingua }) {
+  const T = useT();
   const perdita = ping.tentativi ? ping.perdite / ping.tentativi : null;
   // "rete" misura solo fino all'ingresso nella rete Google, non fino al server:
   // non lo mostriamo come ping (sarebbe molto più basso del reale per server lontani).
@@ -75,7 +67,7 @@ function Server({ server, ping }) {
   const msPing = soloRete ? null : ping.ms;
   const tono = tonoPing(msPing);
   return (
-    <Cornice titolo="SERVER" extra={METODI_PING[ping.metodo] ?? (ping.ricerca ? "RICERCA…" : null)} className="c-server">
+    <Cornice titolo={T.server} extra={T.metodi[ping.metodo] ?? (ping.ricerca ? T.ricerca : null)} className="c-server">
       <div className="ping-zona">
         <Quadrante
           valore={msPing}
@@ -86,28 +78,28 @@ function Server({ server, ping }) {
           zone={[{ da: 0, a: 80, tono: "ok" }, { da: 80, a: 150, tono: "attenzione" }, { da: 150, a: 300, tono: "critico" }]}
         >
           <text x="110" y="128" className={`quadrante-numero tono-${tono}`}>{msPing ?? "---"}</text>
-          <text x="110" y="150" className="quadrante-unita">{ping.metodo && ping.metodo !== "icmp" && !soloRete ? "MS · STIMATO" : "MS · PING"}</text>
+          <text x="110" y="150" className="quadrante-unita">{ping.metodo && ping.metodo !== "icmp" && !soloRete ? T.msStimato : T.msPing}</text>
         </Quadrante>
         <div className="ping-lato">
-          <Dato etichetta="PERSI" valore={ping.metodo ? percento(perdita) : trattino} tono={perdita > 0.05 ? "attenzione" : null} />
+          <Dato etichetta={T.persi} valore={ping.metodo ? percento(perdita) : trattino} tono={perdita > 0.05 ? "attenzione" : null} />
           {soloRete ? (
-            <Dato etichetta="RETE FINO A GOOGLE" valore={ping.ms == null ? null : `${ping.ms} ms`} />
+            <Dato etichetta={T.reteGoogle} valore={ping.ms == null ? null : `${ping.ms} ms`} />
           ) : (
-            <Dato etichetta="VERSO" valore={ping.dettaglio ?? (server.ip ? "server" : null)} />
+            <Dato etichetta={T.verso} valore={ping.dettaglio ?? (server.ip ? T.serverParola : null)} />
           )}
           <GraficoPing storico={ping.storico} />
         </div>
       </div>
       {!server.ip ? (
-        <p className="attesa">Nessun server: entra nell'universo di gioco</p>
+        <p className="attesa">{T.nessunServer}</p>
       ) : (
         <div className="dati-colonna">
-          <Dato etichetta="REGIONE" valore={server.regione} />
-          <Dato etichetta="CONNESSO" valore={durata(server.connessoDaSecondi)} />
-          <Dato etichetta="SHARD" valore={server.shard} />
-          <Dato etichetta="IP" valore={server.ip} />
-          <Dato etichetta="AMBIENTE" valore={server.ambiente} />
-          <Dato etichetta="BUILD" valore={server.build} />
+          <Dato etichetta={T.regione} valore={traduciRegione(server.regione, lingua)} />
+          <Dato etichetta={T.connesso} valore={durata(server.connessoDaSecondi)} />
+          <Dato etichetta={T.shard} valore={server.shard} />
+          <Dato etichetta={T.ip} valore={server.ip} />
+          <Dato etichetta={T.ambiente} valore={server.ambiente} />
+          <Dato etichetta={T.build} valore={server.build} />
         </div>
       )}
     </Cornice>
@@ -115,10 +107,11 @@ function Server({ server, ping }) {
 }
 
 function Eventi({ eventi }) {
+  const T = useT();
   return (
-    <Cornice titolo="REGISTRO EVENTI" className="c-eventi">
+    <Cornice titolo={T.registro} className="c-eventi">
       {!eventi?.length ? (
-        <p className="attesa">Nessun evento</p>
+        <p className="attesa">{T.nessunEvento}</p>
       ) : (
         <ul className="registro">
           {eventi.slice(0, 9).map((e, i) => (
@@ -137,26 +130,28 @@ const altPasso = (a) => (a == null ? 100 : Math.abs(a) > 20000 ? 1000 : Math.abs
 const distanzaBreve = (m) => (Math.abs(m) >= 10000 ? `${numero(m / 1000, 1)}k` : numero(m));
 
 function Centro({ nave }) {
+  const T = useT();
+  const tr = useTr();
   const v = nave?.volo;
   const massimo = nave?.modalita === "NAVIGATION" ? 1500 : 450;
   return (
     <div className="centro">
       <div className="centro-testa">
         <div>
-          <div className="nave-nome">{nave?.nome ?? "NESSUNA NAVE"}</div>
-          <div className="nave-sotto">{nave ? nave.produttore ?? "" : "Siediti ai comandi di una nave"}</div>
+          <div className="nave-nome">{nave?.nome ?? T.nessunaNave}</div>
+          <div className="nave-sotto">{nave ? nave.produttore ?? "" : T.siediti}</div>
         </div>
         <div className="nave-stati">
           <Targhetta nome={tr(nave?.modalita)} acceso={!!nave} />
-          <Targhetta nome="SPOOL" acceso={!!nave?.spool} />
-          <Targhetta nome={nave ? (nave.atterrata ? "ATTERRATA" : "IN VOLO") : "—"} acceso={!!nave} />
-          <Targhetta nome={`CARRELLO ${tr(nave?.carrello)}`} acceso={!!nave} />
-          <Targhetta nome="LUCI" acceso={!!nave?.luci} />
+          <Targhetta nome={T.spool} acceso={!!nave?.spool} />
+          <Targhetta nome={nave ? (nave.atterrata ? T.atterrata : T.inVolo) : "—"} acceso={!!nave} />
+          <Targhetta nome={`${T.carrello} ${tr(nave?.carrello)}`} acceso={!!nave} />
+          <Targhetta nome={T.luci} acceso={!!nave?.luci} />
         </div>
       </div>
 
       <div className="centro-corpo">
-        <NastroVerticale valore={v?.altitudine ?? null} passo={altPasso(v?.altitudine)} etichetta="ALTITUDINE" formato={distanzaBreve} />
+        <NastroVerticale valore={v?.altitudine ?? null} passo={altPasso(v?.altitudine)} etichetta={T.altitudine} formato={distanzaBreve} />
         <NaveScudi nave={nave} massimoVelocita={massimo} />
         <div className="centro-destra">
           <div className="mini-quadrante">
@@ -166,10 +161,10 @@ function Centro({ nave }) {
               <text x="90" y="124" className="quadrante-unita">G</text>
             </Quadrante>
           </div>
-          <Dato etichetta="VEL. VERTICALE" valore={v?.velocitaVerticale == null ? null : `${v.velocitaVerticale >= 0 ? "+" : ""}${numero(v.velocitaVerticale)} m/s`} />
-          <Dato etichetta="ALT. RADAR" valore={distanza(v?.altitudineRadar ?? null)} />
-          <Dato etichetta="PRUA" valore={v?.prua == null ? null : `${String(Math.round(v.prua) % 360).padStart(3, "0")}°`} />
-          <Dato etichetta="SCAFO" valore={percento(nave?.scafo != null && nave.scafo <= 1 ? nave.scafo : null)} />
+          <Dato etichetta={T.velVerticale} valore={v?.velocitaVerticale == null ? null : `${v.velocitaVerticale >= 0 ? "+" : ""}${numero(v.velocitaVerticale)} m/s`} />
+          <Dato etichetta={T.altRadar} valore={distanza(v?.altitudineRadar ?? null)} />
+          <Dato etichetta={T.prua} valore={v?.prua == null ? null : `${String(Math.round(v.prua) % 360).padStart(3, "0")}°`} />
+          <Dato etichetta={T.scafo} valore={percento(nave?.scafo != null && nave.scafo <= 1 ? nave.scafo : null)} />
         </div>
       </div>
 
@@ -180,13 +175,13 @@ function Centro({ nave }) {
           ))}
         </div>
         <div className="targhette">
-          <span className="targhette-titolo">IFCS</span>
+          <span className="targhette-titolo">{T.ifcs}</span>
           {IFCS.map((k) => (
             <Targhetta key={k} nome={k} acceso={nave?.ifcs?.[k]?.attivo} disponibile={nave?.ifcs?.[k]?.abilitato !== false} />
           ))}
         </div>
         <div className="targhette">
-          <span className="targhette-titolo">POTENZA</span>
+          <span className="targhette-titolo">{T.potenza}</span>
           {POTENZA.map((k) => (
             <Targhetta key={k} nome={k} acceso={nave?.potenza?.[k]} />
           ))}
@@ -197,42 +192,44 @@ function Centro({ nave }) {
 }
 
 function Sistemi({ nave }) {
+  const T = useT();
   const s = nave?.sistemi;
   return (
-    <Cornice titolo="SISTEMI" extra={s?.boost?.attivo ? "BOOST ATTIVO" : null} className="c-sistemi">
+    <Cornice titolo={T.sistemi} extra={s?.boost?.attivo ? T.boostAttivo : null} className="c-sistemi">
       <div className="anelli">
-        <Anello rapporto={s?.idrogeno} etichetta="IDROGENO" />
-        <Anello rapporto={s?.quantum} etichetta="QUANTUM" />
-        <Anello rapporto={s?.scudi} etichetta="SCUDI" />
+        <Anello rapporto={s?.idrogeno} etichetta={T.idrogeno} />
+        <Anello rapporto={s?.quantum} etichetta={T.quantum} />
+        <Anello rapporto={s?.scudi} etichetta={T.scudi} />
       </div>
-      <Segmenti rapporto={s?.boost?.riserva} etichetta="BOOST" />
+      <Segmenti rapporto={s?.boost?.riserva} etichetta={T.boost} />
     </Cornice>
   );
 }
 
 function Armi({ armi }) {
+  const T = useT();
   return (
-    <Cornice titolo="ARMI" extra={armi?.gimbalBloccati ? "GIMBAL BLOCCATI" : null} className="c-armi">
+    <Cornice titolo={T.armi} extra={armi?.gimbalBloccati ? T.gimbal : null} className="c-armi">
       <div className="armi-pronte">
         <div className="pip-fila">
           {armi
             ? Array.from({ length: Math.max(armi.totali, 1) }, (_, i) => <span key={i} className={`pip ${i < armi.pronte ? "on" : ""}`} />)
             : <span className="attesa">—</span>}
         </div>
-        <span className="armi-conteggio">{armi ? `${armi.pronte}/${armi.totali} PRONTE` : "NESSUN DATO"}</span>
+        <span className="armi-conteggio">{armi ? `${armi.pronte}/${armi.totali} ${T.pronte}` : T.nessunDato}</span>
       </div>
       <div className="contatori">
         <div className="contatore">
           <b>{armi?.decoy ?? "--"}</b>
-          <span>DECOY</span>
+          <span>{T.decoy}</span>
         </div>
         <div className="contatore">
           <b>{armi?.noise ?? "--"}</b>
-          <span>NOISE</span>
+          <span>{T.noise}</span>
         </div>
         <div className="contatore">
           <b>{armi?.preset ?? "--"}</b>
-          <span>PRESET</span>
+          <span>{T.preset}</span>
         </div>
       </div>
     </Cornice>
@@ -240,15 +237,17 @@ function Armi({ armi }) {
 }
 
 function Personaggio({ p }) {
+  const T = useT();
+  const tr = useTr();
   return (
-    <Cornice titolo="PILOTA" extra={p ? (p.aria ? "ARIA OK" : "NO ARIA") : null} className="c-pilota">
+    <Cornice titolo={T.pilota} extra={p ? (p.aria ? T.ariaOk : T.noAria) : null} className="c-pilota">
       <div className="pilota-riga">
-        <Anello rapporto={p?.salute?.rapporto} etichetta="SALUTE" dimensione={84} />
-        <Anello rapporto={p?.ossigeno?.rapporto} etichetta="OSSIGENO" dimensione={84} />
+        <Anello rapporto={p?.salute?.rapporto} etichetta={T.salute} dimensione={84} />
+        <Anello rapporto={p?.ossigeno?.rapporto} etichetta={T.ossigeno} dimensione={84} />
         <Battito bpm={p?.battito ?? null} />
       </div>
       <div className="dati-colonna">
-        <Dato etichetta="POSIZIONE" valore={p ? `${tr(p.posizione)}${p.ruolo ? ` · ${tr(p.ruolo)}` : ""}` : null} />
+        <Dato etichetta={T.posizione} valore={p ? `${tr(p.posizione)}${p.ruolo ? ` · ${tr(p.ruolo)}` : ""}` : null} />
         <Dato etichetta="aUEC" valore={p?.auec == null ? null : numero(p.auec)} />
       </div>
     </Cornice>
@@ -260,50 +259,54 @@ function Personaggio({ p }) {
 export default function App() {
   const { dati, collegato } = usePonte();
   const scala = useScala();
-  const orologio = useOrologio();
   const st = dati?.stato;
+  const lingua = st?.lingua === "it" || st?.lingua === "en" ? st.lingua : linguaBrowser();
+  const T = TESTI[lingua];
+  impostaLocale(T.locale);
+  const orologio = useOrologio(T.locale);
   const nave = dati?.nave ?? null;
 
   let avviso = null;
-  if (!collegato) avviso = { tono: "critico", testo: "Collegamento interrotto con il motore della telemetria" };
-  else if (st && !st.log) avviso = { tono: "critico", testo: "Game.log non trovato: controlla la cartella del gioco nelle Impostazioni" };
-  else if (st?.gioco === false) avviso = { tono: "attenzione", testo: "Star Citizen è chiuso: i dati compariranno quando avvii il gioco" };
-  else if (st && !st.telemetria)
-    avviso = { tono: "attenzione", testo: "Telemetria non ricevuta: Impostazioni → Attiva telemetria nel gioco. Ping e server funzionano comunque" };
+  if (!collegato) avviso = { tono: "critico", testo: T.avvisi.collegamento };
+  else if (st && !st.log) avviso = { tono: "critico", testo: T.avvisi.log };
+  else if (st?.gioco === false) avviso = { tono: "attenzione", testo: T.avvisi.chiuso };
+  else if (st && !st.telemetria) avviso = { tono: "attenzione", testo: T.avvisi.telemetria };
 
   return (
-    <div className="schermo">
-      <div className="scena" style={{ transform: `translate(-50%, -50%) scale(${scala})` }}>
-        <header className="testata">
-          <div className="testata-sx">
-            <span className="logo">TELEMETRIA SC</span>
-            {st?.versione && <span className="distintivo">{st.versione}</span>}
-            {dati?.demo && <span className="distintivo demo">DEMO</span>}
-          </div>
-          <Bussola prua={nave?.volo?.prua ?? null} />
-          <div className="testata-dx">
-            {st?.gioco != null && <Luce nome="GIOCO" acceso={st.gioco} />}
-            <Luce nome="LOG" acceso={!!st?.log} />
-            <Luce nome={st?.telemetria ? `TELEM ${st.pacchettiAlSecondo}/S` : "TELEM"} acceso={!!st?.telemetria} />
-            <span className="orologio">{orologio}</span>
-          </div>
-        </header>
+    <ContestoLingua.Provider value={T}>
+      <div className="schermo">
+        <div className="scena" style={{ transform: `translate(-50%, -50%) scale(${scala})` }}>
+          <header className="testata">
+            <div className="testata-sx">
+              <span className="logo">TELEMETRIA SC</span>
+              {st?.versione && <span className="distintivo">{st.versione}</span>}
+              {dati?.demo && <span className="distintivo demo">DEMO</span>}
+            </div>
+            <Bussola prua={nave?.volo?.prua ?? null} cardinali={T.cardinali} />
+            <div className="testata-dx">
+              {st?.gioco != null && <Luce nome={T.gioco} acceso={st.gioco} />}
+              <Luce nome={T.log} acceso={!!st?.log} />
+              <Luce nome={st?.telemetria ? `${T.telem} ${st.pacchettiAlSecondo}/S` : T.telem} acceso={!!st?.telemetria} />
+              <span className="orologio">{orologio}</span>
+            </div>
+          </header>
 
-        {avviso && <div className={`avviso tono-bordo-${avviso.tono}`}>{avviso.testo}</div>}
+          {avviso && <div className={`avviso tono-bordo-${avviso.tono}`}>{avviso.testo}</div>}
 
-        <main className="cruscotto">
-          <div className="colonna">
-            {dati && <Server server={dati.server} ping={dati.ping} />}
-            {dati && <Eventi eventi={dati.eventi} />}
-          </div>
-          <Centro nave={nave} />
-          <div className="colonna">
-            <Sistemi nave={nave} />
-            <Armi armi={dati?.armi ?? null} />
-            <Personaggio p={dati?.personaggio ?? null} />
-          </div>
-        </main>
+          <main className="cruscotto">
+            <div className="colonna">
+              {dati && <Server server={dati.server} ping={dati.ping} lingua={lingua} />}
+              {dati && <Eventi eventi={dati.eventi} />}
+            </div>
+            <Centro nave={nave} />
+            <div className="colonna">
+              <Sistemi nave={nave} />
+              <Armi armi={dati?.armi ?? null} />
+              <Personaggio p={dati?.personaggio ?? null} />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ContestoLingua.Provider>
   );
 }

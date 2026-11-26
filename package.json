@@ -4,7 +4,7 @@
   "description": "Telemetria di Star Citizen su schermo secondario",
   "author": "alteus83",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "main": "app/main.mjs",
   "scripts": {
@@ -69,11 +69,15 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Telemetria SC",
       "installerLanguages": [
-        "it_IT"
+        "it_IT",
+        "en_US"
       ],
-      "language": "1040",
+      "language": "1033",
       "runAfterFinish": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+      "multiLanguageInstaller": true
     },
     "publish": [
       {

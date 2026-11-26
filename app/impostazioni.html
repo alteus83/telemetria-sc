@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
-    <title>Telemetria SC — Impostazioni</title>
+    <title>Telemetria SC</title>
     <style>
       :root {
         --sfondo: #06111f; --pannello: #0b1f36; --bordo: #1d4a72; --testo: #a9e8ff;
@@ -74,85 +74,94 @@
   <body>
     <header>
       <h1>TELEMETRIA SC</h1>
-      <div class="sotto">Impostazioni · <span id="statoGioco">—</span></div>
+      <div class="sotto"><span data-t="impostazioni">Impostazioni</span> · <span id="statoGioco">—</span></div>
     </header>
 
     <main>
       <section>
-        <h2>AVVIO</h2>
+        <h2 data-t="avvio">AVVIO</h2>
         <label class="voce">
           <input type="checkbox" id="avvioConPC" />
           <div>
-            <strong>Avvia all'accensione del PC</strong>
-            <span>L'app parte da sola con Windows e resta come icona vicino all'orologio.</span>
+            <strong data-t="avvioConPC">Avvia all'accensione del PC</strong>
+            <span data-t="avvioConPCInfo">L'app parte da sola con Windows e resta come icona vicino all'orologio.</span>
           </div>
         </label>
         <label class="voce">
           <input type="checkbox" id="aperturaAutomatica" />
           <div>
-            <strong>Apri la schermata quando parte il gioco</strong>
-            <span>Si apre quando avvii Star Citizen e si chiude quando lo chiudi.</span>
+            <strong data-t="apertura">Apri la schermata quando parte il gioco</strong>
+            <span data-t="aperturaInfo">Si apre quando avvii Star Citizen e si chiude quando lo chiudi.</span>
           </div>
         </label>
       </section>
 
       <section>
-        <h2>GIOCO</h2>
-        <div class="scelta" role="radiogroup" aria-label="Versione del gioco">
-          <label><input type="radio" name="canale" value="AUTO" /><span>AUTOMATICA</span></label>
+        <h2 data-t="gioco">GIOCO</h2>
+        <div class="scelta" role="radiogroup" data-t-aria="versioneGioco">
+          <label><input type="radio" name="canale" value="AUTO" /><span data-t="automatica">AUTOMATICA</span></label>
           <label><input type="radio" name="canale" value="LIVE" /><span>LIVE</span></label>
           <label><input type="radio" name="canale" value="PTU" /><span>PTU</span></label>
         </div>
         <div class="stato neutro" id="canaleInUso">—</div>
         <div class="percorso">
           <code id="cartellaGioco">—</code>
-          <button id="sfoglia" type="button">Sfoglia…</button>
+          <button id="sfoglia" type="button" data-t="sfoglia">Sfoglia…</button>
         </div>
         <div class="stato" id="statoLog">—</div>
       </section>
 
       <section>
-        <h2>TELEMETRIA DEL GIOCO</h2>
+        <h2 data-t="telemetria">TELEMETRIA DEL GIOCO</h2>
         <div class="controlli">
-          <div class="controllo"><span>Variabile di Windows</span><b id="tVariabile">—</b></div>
-          <div class="controllo"><span>File user.cfg</span><b id="tUserCfg">—</b></div>
-          <div class="controllo"><span>Ultimo avvio del gioco</span><b id="tLog">—</b></div>
-          <div class="controllo"><span>Dati ricevuti ora</span><b id="tRicevuta">—</b></div>
+          <div class="controllo"><span data-t="variabile">Variabile di Windows</span><b id="tVariabile">—</b></div>
+          <div class="controllo"><span data-t="fileCfg">File user.cfg</span><b id="tUserCfg">—</b></div>
+          <div class="controllo"><span data-t="ultimoAvvio">Ultimo avvio del gioco</span><b id="tLog">—</b></div>
+          <div class="controllo"><span data-t="ricevuti">Dati ricevuti ora</span><b id="tRicevuta">—</b></div>
         </div>
-        <button id="attivaTelemetria" type="button" style="margin-top: 10px; width: 100%">ATTIVA TELEMETRIA NEL GIOCO</button>
+        <button id="attivaTelemetria" type="button" style="margin-top: 10px; width: 100%" data-t="attiva">ATTIVA TELEMETRIA NEL GIOCO</button>
         <div class="esito" id="esitoTelemetria"></div>
       </section>
 
       <section>
-        <h2>SCHERMATA</h2>
-        <select id="monitor" aria-label="Monitor della schermata"></select>
+        <h2 data-t="schermata">SCHERMATA</h2>
+        <select id="monitor" data-t-aria="monitor"></select>
         <label class="voce" style="margin-top: 6px">
           <input type="checkbox" id="schermoIntero" />
           <div>
-            <strong>Schermo intero</strong>
-            <span>Nella schermata: F11 attiva o disattiva, Esc esce dallo schermo intero.</span>
+            <strong data-t="schermoIntero">Schermo intero</strong>
+            <span data-t="schermoInteroInfo">Nella schermata: F11 attiva o disattiva, Esc esce dallo schermo intero.</span>
           </div>
         </label>
       </section>
 
       <section>
-        <h2>AGGIORNAMENTI</h2>
-        <div class="controlli">
-          <div class="controllo"><span>Versione installata</span><b id="aVersione">—</b></div>
-          <div class="controllo"><span>Stato</span><b id="aStato">—</b></div>
-        </div>
-        <div class="pulsanti">
-          <button id="controllaAgg" type="button">CERCA AGGIORNAMENTI</button>
-          <button id="installaAgg" type="button" hidden>INSTALLA E RIAVVIA</button>
+        <h2 data-t="lingua">LINGUA</h2>
+        <div class="scelta" role="radiogroup" data-t-aria="lingua">
+          <label><input type="radio" name="lingua" value="AUTO" /><span data-t="automatica">AUTOMATICA</span></label>
+          <label><input type="radio" name="lingua" value="it" /><span>ITALIANO</span></label>
+          <label><input type="radio" name="lingua" value="en" /><span>ENGLISH</span></label>
         </div>
       </section>
 
-      <button class="principale" id="apri" type="button">APRI SCHERMATA ORA</button>
+      <section>
+        <h2 data-t="aggiornamenti">AGGIORNAMENTI</h2>
+        <div class="controlli">
+          <div class="controllo"><span data-t="versioneInstallata">Versione installata</span><b id="aVersione">—</b></div>
+          <div class="controllo"><span data-t="stato">Stato</span><b id="aStato">—</b></div>
+        </div>
+        <div class="pulsanti">
+          <button id="controllaAgg" type="button" data-t="cerca">CERCA AGGIORNAMENTI</button>
+          <button id="installaAgg" type="button" hidden data-t="installa">INSTALLA E RIAVVIA</button>
+        </div>
+      </section>
+
+      <button class="principale" id="apri" type="button" data-t="apri">APRI SCHERMATA ORA</button>
 
       <div class="piede" id="piede"></div>
     </main>
 
-    <div id="salvato" role="status">Salvato</div>
+    <div id="salvato" role="status" data-t="salvato">Salvato</div>
     <script src="impostazioni.js"></script>
   </body>
 </html>

@@ -6,6 +6,7 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { testi } from "./testi.mjs";
 
 const VARIABILE = "GRPC_CLIENT_SERVER_ENABLED";
 
@@ -69,33 +70,34 @@ export async function statoTelemetriaGioco(imp) {
   return { variabile, userCfg, fileUserCfg: file };
 }
 
-export async function attivaTelemetriaGioco(imp) {
+export async function attivaTelemetriaGioco(imp, lingua = "it") {
+  const T = testi(lingua);
   const messaggi = [];
   if (process.platform === "win32") {
     const r = await esegui("setx", [VARIABILE, "true"]);
-    messaggi.push(r.ok ? "✓ Variabile di Windows impostata" : `✗ Variabile di Windows: ${r.testo.trim()}`);
+    messaggi.push(r.ok ? T.tVariabileOk : T.tVariabileNo(r.testo.trim()));
   }
   const file = percorsoUserCfg(imp);
   if (!file) {
-    messaggi.push("✗ Cartella del gioco non impostata");
+    messaggi.push(T.tNoCartella);
   } else {
     try {
       const esiste = fs.existsSync(file);
       const prima = esiste ? fs.readFileSync(file, "utf8") : "";
       const dopo = aggiornaTestoUserCfg(prima, imp.versione);
       if (dopo === prima) {
-        messaggi.push(`✓ user.cfg (${imp.versione}) già pronto`);
+        messaggi.push(T.tCfgGiaPronto(imp.versione));
       } else {
         // Copia di sicurezza, solo la prima volta
         const copia = `${file}.prima-di-telemetria-sc`;
         if (esiste && !fs.existsSync(copia)) fs.copyFileSync(file, copia);
         fs.writeFileSync(file, dopo, "utf8");
-        messaggi.push(`✓ user.cfg (${imp.versione}) ${esiste ? "aggiornato" : "creato"}`);
+        messaggi.push(esiste ? T.tCfgAggiornato(imp.versione) : T.tCfgCreato(imp.versione));
       }
     } catch (e) {
-      messaggi.push(`✗ user.cfg: ${e.code === "EPERM" || e.code === "EACCES" ? "permesso negato" : e.message}`);
+      messaggi.push(T.tCfgErrore(e.code === "EPERM" || e.code === "EACCES" ? T.tPermesso : e.message));
     }
   }
-  messaggi.push("Ora chiudi del tutto l'RSI Launcher (anche dall'icona vicino all'orologio) e riavvia il gioco.");
+  messaggi.push(T.tRiavvia);
   return { messaggi, stato: await statoTelemetriaGioco(imp) };
 }

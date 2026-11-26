@@ -27,7 +27,7 @@ export function avviaDemo({ onDati, onEvento }) {
     scudi = Math.min(1, scudi + 0.004);
     if (Math.random() < 0.01) {
       scudi = Math.max(0, scudi - 0.35);
-      onEvento("Colpo agli scudi");
+      onEvento({ k: "colpo" });
     }
     telemetria.ultimoPacchetto = Date.now();
     onDati({
@@ -98,7 +98,7 @@ export function avviaDemo({ onDati, onEvento }) {
     if (ping.storico.length > 60) ping.storico.shift();
   }, 2000);
 
-  onEvento("Modalità DEMO: dati simulati");
+  onEvento({ k: "demo" });
   return {
     server,
     ping,

@@ -134,24 +134,13 @@ function normalizzaPersonaggio(a) {
   };
 }
 
-const NOMI_EVENTI = {
-  ACTOR_SPAWN: "Personaggio comparso",
-  ACTOR_DEAD: "Personaggio morto",
-  ACTOR_ENTER_SEAT: "Seduto",
-  ACTOR_LEAVE_SEAT: "Alzato dal sedile",
-  ACTOR_RESPAWN: "Rinascita",
-  ACTOR_DOWNED: "A terra (ferito)",
-};
-
 export function normalizzaFrame(f) {
   return {
     nave: normalizzaNave(f.vehicle),
     armi: normalizzaArmi(f.weapons),
     personaggio: normalizzaPersonaggio(f.actor),
-    eventi: (f.events?.events ?? []).map((e) => {
-      const tipo = String(e.type).replace("GAME_EVENT_TYPE_", "");
-      return NOMI_EVENTI[tipo] ?? tipo;
-    }),
+    // Codici degli eventi del gioco (es. ACTOR_ENTER_SEAT): il testo è in eventi.mjs
+    eventi: (f.events?.events ?? []).map((e) => String(e.type).replace("GAME_EVENT_TYPE_", "")),
   };
 }
 
@@ -199,7 +188,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, onDati, onEvento }) 
       if (!ricevuto) {
         ricevuto = true;
         indice -= 1; // restiamo su questa porta ai prossimi tentativi
-        onEvento?.(`Telemetria collegata (porta ${porta})`);
+        onEvento?.({ k: "telemetriaOk", p: { porta } });
       }
       stato.connesso = true;
       stato.porta = porta;
@@ -213,7 +202,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, onDati, onEvento }) 
     const riprova = (motivo) => {
       if (chiusa) return; // "error" ed "end" possono arrivare entrambi
       chiusa = true;
-      if (stato.connesso && ricevuto) onEvento?.("Telemetria persa, riprovo…");
+      if (stato.connesso && ricevuto) onEvento?.({ k: "telemetriaPersa" });
       stato.connesso = false;
       stato.errore = motivo;
       chiamata?.removeAllListeners();

@@ -60,13 +60,13 @@ export function statoServerVuoto() {
   };
 }
 
-// Analizza una riga e aggiorna lo stato. Restituisce un evento leggibile
-// (stringa) se la riga è degna di comparire nel registro eventi.
+// Analizza una riga e aggiorna lo stato. Restituisce un evento { k, p }
+// (vedi eventi.mjs) se la riga è degna di comparire nel registro eventi.
 export function analizzaRiga(riga, s, adesso = Date.now()) {
   let m;
   if (MODELLI.avvioLog.test(riga)) {
     Object.assign(s, statoServerVuoto());
-    return "Gioco avviato (nuovo log)";
+    return { k: "avvioLog" };
   }
   if ((m = riga.match(MODELLI.joinPU))) {
     s.ip = m[1];
@@ -74,14 +74,14 @@ export function analizzaRiga(riga, s, adesso = Date.now()) {
     s.shard = pulisciShard(m[3]);
     s.regione = regioneDaShard(s.shard);
     s.connessoDa = adesso;
-    return `Entrato nell'universo: shard ${s.shard}`;
+    return { k: "join", p: { shard: s.shard } };
   }
   if ((m = riga.match(MODELLI.nuovoShard))) {
     const nuovo = pulisciShard(m[1]);
     if (nuovo === s.shard) return null; // stesso shard già annunciato
     s.shard = nuovo;
     s.regione = regioneDaShard(nuovo) ?? s.regione;
-    return `Cambio shard: ${nuovo}`;
+    return { k: "shard", p: { shard: nuovo } };
   }
   if ((m = riga.match(MODELLI.connessione))) {
     if (s.ip !== m[1]) {
@@ -110,7 +110,7 @@ export function analizzaRiga(riga, s, adesso = Date.now()) {
   }
   if ((m = riga.match(MODELLI.portaTelemetria))) {
     s.portaTelemetria = Number(m[2]);
-    return `Telemetria del gioco attiva sulla porta ${m[2]}`;
+    return { k: "portaTelemetria", p: { porta: m[2] } };
   }
   if (!s.branch && (m = riga.match(MODELLI.branch))) {
     s.branch = m[1];
@@ -121,7 +121,7 @@ export function analizzaRiga(riga, s, adesso = Date.now()) {
     return null;
   }
   if (MODELLI.morte.test(riga)) {
-    return "Morte registrata nel log";
+    return { k: "morte" };
   }
   return null;
 }

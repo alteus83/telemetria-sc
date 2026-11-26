@@ -15,6 +15,7 @@ import { avviaControlloGioco } from "../ponte/processo.mjs";
 import { creaArchivio, percorsoGameLog, normalizzaCartella } from "./impostazioni.mjs";
 import { creaAggiornamenti } from "./aggiornamenti.mjs";
 import { statoTelemetriaGioco, attivaTelemetriaGioco } from "./telemetria-gioco.mjs";
+import { testi, linguaEffettiva } from "./testi.mjs";
 
 const cartella = path.dirname(fileURLToPath(import.meta.url));
 const ICONA = path.join(cartella, "icone", "icona.png");
@@ -29,7 +30,7 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on("second-instance", () => apriImpostazioni());
   app.whenReady().then(avvio).catch((e) => {
-    dialog.showErrorBox("Telemetria SC", `L'app non è riuscita a partire:\n\n${e?.stack ?? e}`);
+    dialog.showErrorBox("Telemetria SC", testi(linguaEffettiva("AUTO", app.getLocale())).erroreAvvio(e?.stack ?? e));
     app.exit(1);
   });
 }
@@ -59,8 +60,13 @@ function scrivi(testo) {
   }
 }
 
+// Lingua in uso: quella scelta nelle Impostazioni o, con AUTO, quella di Windows.
+const lingua = () => linguaEffettiva(imp?.lingua, app.getLocale());
+const T = () => testi(lingua());
+
 function configPonte() {
   return {
+    lingua: lingua(),
     portaWeb: imp.portaWeb,
     apriInRete: false,
     gameLog: percorsoGameLog(imp),
@@ -107,6 +113,7 @@ async function avvio() {
     scrivi: (t) => scrivi(`[aggiornamenti] ${t}`),
     onCambio: () => aggiornaTray(),
     primaDiInstallare: () => ponte?.chiudi(),
+    testi: T,
   });
 
   gioco = avviaControlloGioco(3000, (aperto, info) => {
@@ -150,21 +157,21 @@ function creaTray() {
 
 function aggiornaTray() {
   if (!tray) return;
-  const statoGioco =
-    gioco.aperto === true ? "Star Citizen: aperto" : gioco.aperto === false ? "Star Citizen: chiuso" : "Star Citizen: —";
+  const t = T();
+  const statoGioco = gioco.aperto === true ? t.giocoAperto : gioco.aperto === false ? t.giocoChiuso : t.giocoSconosciuto;
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: "Telemetria SC", enabled: false },
       { label: statoGioco, enabled: false },
       { type: "separator" },
-      { label: "Apri schermata", click: () => apriSchermata() },
-      { label: "Impostazioni…", click: () => apriImpostazioni() },
+      { label: t.apriSchermata, click: () => apriSchermata() },
+      { label: t.impostazioni, click: () => apriImpostazioni() },
       ...(aggiornamenti.stato.fase === "pronto"
-        ? [{ label: `Installa aggiornamento ${aggiornamenti.stato.versione} e riavvia`, click: () => aggiornamenti.installa() }]
+        ? [{ label: t.installaAgg(aggiornamenti.stato.versione), click: () => aggiornamenti.installa() }]
         : []),
       { type: "separator" },
       {
-        label: "Esci",
+        label: t.esci,
         click: () => {
           ponte?.chiudi();
           // app.quit (non app.exit) permette di installare un aggiornamento già scaricato
@@ -193,7 +200,7 @@ function elencoMonitor() {
     const alt = Math.round(d.size.height * d.scaleFactor);
     return {
       id: d.id,
-      nome: `Monitor ${i + 1}${d.label ? ` (${d.label})` : ""} — ${larg}×${alt}${d.id === principale ? " · principale" : ""}`,
+      nome: `Monitor ${i + 1}${d.label ? ` (${d.label})` : ""} — ${larg}×${alt}${d.id === principale ? (lingua() === "it" ? " · principale" : " · primary") : ""}`,
       principale: d.id === principale,
     };
   });
@@ -277,7 +284,7 @@ function apriImpostazioni() {
     height: 860,
     resizable: true,
     minWidth: 420,
-    title: "Telemetria SC — Impostazioni",
+    title: T().titoloImpostazioni,
     icon: ICONA,
     backgroundColor: "#06111f",
     autoHideMenuBar: true,
@@ -312,6 +319,7 @@ async function datiPerImpostazioni() {
     gameLog: { percorso: gameLog, trovato: !!gameLog && fs.existsSync(gameLog) },
     gioco: gioco.aperto,
     canaleRilevato: gioco.info?.canale ?? null,
+    linguaInUso: lingua(),
     versioneApp: app.getVersion(),
     fileImpostazioni: archivio.file,
     fileRegistro,
@@ -324,11 +332,12 @@ ipcMain.handle("imp:salva", (_e, modifiche) => {
   const prima = imp;
   const ammesse = Object.fromEntries(
     Object.entries(modifiche ?? {}).filter(([k]) =>
-      ["avvioConPC", "aperturaAutomatica", "schermoIntero", "canale", "cartellaGioco", "monitorId"].includes(k)
+      ["avvioConPC", "aperturaAutomatica", "schermoIntero", "canale", "cartellaGioco", "monitorId", "lingua"].includes(k)
     )
   );
   if ("cartellaGioco" in ammesse) ammesse.cartellaGioco = normalizzaCartella(ammesse.cartellaGioco);
   if ("canale" in ammesse && !["AUTO", "LIVE", "PTU"].includes(ammesse.canale)) delete ammesse.canale;
+  if ("lingua" in ammesse && !["AUTO", "it", "en"].includes(ammesse.lingua)) delete ammesse.lingua;
   imp = { ...imp, ...ammesse };
   // Canale scelto a mano: lo usiamo subito. Automatico: quello del gioco aperto, se c'è.
   if (imp.canale !== "AUTO") imp.versione = imp.canale;
@@ -337,7 +346,11 @@ ipcMain.handle("imp:salva", (_e, modifiche) => {
   scrivi(`Impostazioni salvate: ${JSON.stringify(ammesse)}`);
 
   if (prima.avvioConPC !== imp.avvioConPC) applicaAvvioConPC();
-  if (prima.cartellaGioco !== imp.cartellaGioco || prima.versione !== imp.versione) {
+  if (prima.lingua !== imp.lingua) {
+    aggiornaTray();
+    finestraImpostazioni?.setTitle(T().titoloImpostazioni);
+  }
+  if (prima.cartellaGioco !== imp.cartellaGioco || prima.versione !== imp.versione || prima.lingua !== imp.lingua) {
     ponte.aggiornaConfig(configPonte());
   }
   if (prima.monitorId !== imp.monitorId || prima.schermoIntero !== imp.schermoIntero) posizionaSchermata();
@@ -346,7 +359,7 @@ ipcMain.handle("imp:salva", (_e, modifiche) => {
 
 ipcMain.handle("imp:sfoglia", async () => {
   const risultato = await dialog.showOpenDialog(finestraImpostazioni ?? undefined, {
-    title: "Scegli la cartella di Star Citizen (quella che contiene LIVE e PTU)",
+    title: T().sfoglia,
     defaultPath: imp.cartellaGioco ?? undefined,
     properties: ["openDirectory"],
   });
@@ -355,7 +368,7 @@ ipcMain.handle("imp:sfoglia", async () => {
 });
 
 ipcMain.handle("telemetria:attiva", async () => {
-  const r = await attivaTelemetriaGioco(imp);
+  const r = await attivaTelemetriaGioco(imp, lingua());
   scrivi(`Attivazione telemetria: ${r.messaggi.join(" | ")}`);
   return { messaggi: r.messaggi, dati: await datiPerImpostazioni() };
 });

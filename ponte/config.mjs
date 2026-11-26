@@ -26,6 +26,8 @@ const predefiniti = {
 
   // Ogni quanti millisecondi misurare il ping verso il server di gioco.
   intervalloPing: 2000,
+  // Lingua della schermata: "auto" (quella del sistema), "it" o "en".
+  lingua: "auto",
   // Quante volte al secondo inviare i dati allo schermo.
   aggiornamentiAlSecondo: 10,
 };

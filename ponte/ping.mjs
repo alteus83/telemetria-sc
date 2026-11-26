@@ -17,9 +17,16 @@ const FASI = ["icmp", "tcp", "datacenter", "rete"];
 const TENTATIVI_PER_FASE = 3;
 
 export function leggiTempoPing(testo) {
-  // Windows in italiano ("durata=23ms", "durata<1ms"), in inglese ("time=23ms"), Linux ("time=23.4 ms").
-  const m = String(testo || "").match(/(?:durata|time|tempo|zeit|temps)[=<]\s*([\d.,]+)\s*ms/i);
-  return m ? Math.max(1, Math.round(parseFloat(m[1].replace(",", ".")))) : null;
+  // Windows in italiano ("durata=23ms", "durata<1ms"), inglese ("time=23ms"), spagnolo ("tiempo=23ms"),
+  // tedesco ("Zeit=23ms"), francese ("temps=23 ms"), portoghese ("tempo=23ms"), olandese ("tijd=23ms"),
+  // polacco ("czas=23ms"), russo ("время=23мс"), Linux ("time=23.4 ms").
+  const m = String(testo || "").match(
+    /(?:durata|time|tiempo|tempo|zeit|temps|tijd|czas|tid|aika|čas|süre|время|час)\s*[=<]\s*([\d.,]+)\s*(?:ms|мс)/iu
+  );
+  // Riserva indipendente dalla lingua (e dalla codifica dei caratteri): su Windows
+  // il tempo è sempre il numero dopo "=" o "<" subito prima di "TTL=".
+  const r = m ?? String(testo || "").match(/[=<]\s*([\d.,]+)[^\s=<]*\s+TTL=/i);
+  return r ? Math.max(1, Math.round(parseFloat(r[1].replace(",", ".")))) : null;
 }
 
 function pingIcmp(ip) {

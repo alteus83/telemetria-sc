@@ -66,11 +66,16 @@ jobs:
             release/*.exe.blockmap
             release/latest.yml
           body: |
-            Installatore per Windows di Telemetria SC.
-
+            **Italiano** — Installatore per Windows di Telemetria SC.
             1. Scarica **TelemetriaSC-Setup-${{ steps.versione.outputs.v }}.exe** qui sotto.
             2. Aprilo. Se Windows mostra "PC protetto da Windows": **Ulteriori informazioni → Esegui comunque**
                (l'app non è firmata digitalmente).
             3. Segui l'installazione. Alla fine si apre la finestra Impostazioni.
+            Se hai già la versione 2.1.1 o successiva, l'app si aggiorna da sola.
 
-            Se hai già la versione 2.1.1 o successiva installata, l'app si aggiorna da sola.
+            **English** — Windows installer for Telemetria SC.
+            1. Download **TelemetriaSC-Setup-${{ steps.versione.outputs.v }}.exe** below.
+            2. Open it. If Windows shows "Windows protected your PC": **More info → Run anyway**
+               (the app is not digitally signed).
+            3. Follow the setup. At the end the Settings window opens.
+            If you already have version 2.1.1 or later, the app updates itself.

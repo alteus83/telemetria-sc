@@ -20,7 +20,7 @@ test("Game.log: riconosce ingresso nell'universo, shard e regione", () => {
   assert.equal(s.porta, 64090);
   assert.equal(s.shard, "pub_euw1b_9876543_110");
   assert.equal(s.regione, "Europa Ovest");
-  assert.match(ev, /shard/);
+  assert.deepEqual(ev, { k: "join", p: { shard: "pub_euw1b_9876543_110" } });
 });
 
 test("Game.log: porta telemetria, sessione, uptime e riavvio", () => {
@@ -108,7 +108,7 @@ test("Telemetria: riceve e converte i dati da un finto gioco", async () => {
   assert.equal(d.armi.totali, 2);
   assert.equal(d.armi.decoy, 48);
   assert.equal(d.personaggio.salute.rapporto, 0.5);
-  assert.deepEqual(d.eventi, ["Seduto"]);
+  assert.deepEqual(d.eventi, ["ACTOR_ENTER_SEAT"]);
   assert.equal(stato.porta, porta);
 });
 
@@ -204,4 +204,15 @@ test("Canale: riconosce LIVE e PTU dal percorso dell'eseguibile", async () => {
   assert.equal(ptu.gameLog, "C:\\Giochi\\StarCitizen\\PTU\\Game.log");
   assert.equal(canaleDaPercorso("C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen.exe").canale, "LIVE");
   assert.equal(canaleDaPercorso(null), null);
+});
+
+test("Ping: legge i tempi da Windows in altre lingue", async () => {
+  const { leggiTempoPing } = await import("../ping.mjs");
+  assert.equal(leggiTempoPing("Respuesta desde 1.2.3.4: bytes=32 tiempo=45ms TTL=58"), 45);
+  assert.equal(leggiTempoPing("Antwort von 1.2.3.4: Bytes=32 Zeit=12ms TTL=58"), 12);
+  assert.equal(leggiTempoPing("Réponse de 1.2.3.4 : octets=32 temps=8 ms TTL=58"), 8);
+  assert.equal(leggiTempoPing("Odpowiedź z 1.2.3.4: bajtów=32 czas=30ms TTL=58"), 30);
+  assert.equal(leggiTempoPing("Ответ от 1.2.3.4: число байт=32 время=27мс TTL=58"), 27);
+  // codifica rovinata: vale la riserva prima di TTL=
+  assert.equal(leggiTempoPing("ЋвўҐв ®в 1.2.3.4: зЁб«® Ў ©в=32 ўаҐ¬п=33¬б TTL=58"), 33);
 });

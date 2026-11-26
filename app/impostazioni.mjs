@@ -13,6 +13,7 @@ export const PREDEFINITE = {
   cartellaGioco: null, // es. C:\Giochi\StarCitizen (null = da cercare)
   monitorId: null, // id del monitor scelto (null = il secondo, se c'è)
   portaWeb: 8787,
+  lingua: "AUTO", // "AUTO" (quella di Windows), "it" o "en"
 };
 
 // Posti dove di solito si trova Star Citizen. Si prova su più dischi.

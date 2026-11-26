@@ -7,7 +7,7 @@ import updater from "electron-updater";
 const { autoUpdater } = updater;
 const OGNI_QUANTO = 4 * 60 * 60 * 1000; // ogni 4 ore
 
-export function creaAggiornamenti({ scrivi, onCambio, primaDiInstallare }) {
+export function creaAggiornamenti({ scrivi, onCambio, primaDiInstallare, testi }) {
   const stato = {
     fase: app.isPackaged ? "inattivo" : "non-disponibile", // in sviluppo non si aggiorna
     versione: null, // versione nuova trovata
@@ -38,10 +38,8 @@ export function creaAggiornamenti({ scrivi, onCambio, primaDiInstallare }) {
   autoUpdater.on("update-downloaded", (info) => {
     cambia({ fase: "pronto", versione: info.version, percento: 100 });
     if (Notification.isSupported()) {
-      const n = new Notification({
-        title: "Telemetria SC: aggiornamento pronto",
-        body: `La versione ${info.version} è pronta. Clicca qui per installarla (oppure si installerà alla chiusura dell'app).`,
-      });
+      const T = testi();
+      const n = new Notification({ title: T.aggProntoTitolo, body: T.aggProntoTesto(info.version) });
       n.on("click", () => installa());
       n.show();
     }

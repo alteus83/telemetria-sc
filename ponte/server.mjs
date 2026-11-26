@@ -17,6 +17,7 @@ import { avviaLettoreLog } from "./gamelog.mjs";
 import { avviaMisuraPing } from "./ping.mjs";
 import { avviaTelemetria } from "./telemetria.mjs";
 import { avviaDemo } from "./demo.mjs";
+import { testoEvento, linguaDiSistema } from "./eventi.mjs";
 
 const cartella = path.dirname(fileURLToPath(import.meta.url));
 const CARTELLA_WEB = path.join(cartella, "..", "dist");
@@ -42,16 +43,17 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
   let ultimiDati = { nave: null, armi: null, personaggio: null };
   const registro = []; // ultimi eventi, il più recente per primo
 
-  function aggiungiEvento(testo) {
+  // evento = { k, p } (vedi eventi.mjs). Nel file di registro sempre in italiano.
+  function aggiungiEvento(evento) {
     const ora = new Date().toLocaleTimeString("it-IT", { hour12: false });
-    registro.unshift({ ora, testo });
+    registro.unshift({ ora, evento });
     if (registro.length > 30) registro.pop();
-    scrivi(`[${ora}] ${testo}`);
+    scrivi(`[${ora}] ${testoEvento(evento, "it")}`);
   }
 
   function riceviDati(d) {
     ultimiDati = { nave: d.nave, armi: d.armi, personaggio: d.personaggio };
-    for (const e of d.eventi) aggiungiEvento(e);
+    for (const codice of d.eventi) aggiungiEvento({ k: codice });
   }
 
   function creaSorgenti(cfg) {
@@ -98,10 +100,12 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
         ? server.uptimeSecondi + Math.floor((Date.now() - server.uptimeLetto) / 1000)
         : null;
     const telemetriaViva = telemetria.connesso;
+    const lingua = configAttuale.lingua === "it" || configAttuale.lingua === "en" ? configAttuale.lingua : linguaDiSistema();
     return {
       demo,
       ora: Date.now(),
       stato: {
+        lingua,
         versione: demo ? "LIVE" : configAttuale.versione ?? null, // "LIVE" | "PTU"
         gioco: aperto,
         log: lettore.trovato,
@@ -140,7 +144,7 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
       nave: telemetriaViva ? ultimiDati.nave : null,
       armi: telemetriaViva ? ultimiDati.armi : null,
       personaggio: telemetriaViva ? ultimiDati.personaggio : null,
-      eventi: registro,
+      eventi: registro.map(({ ora, evento }) => ({ ora, testo: testoEvento(evento, lingua) })),
     };
   }
 

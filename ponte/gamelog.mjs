@@ -31,6 +31,9 @@ const REGIONI = {
 };
 const ZONE = { w: "Ovest", e: "Est", c: "Centro", n: "Nord", s: "Sud" };
 
+// Toglie la punteggiatura finale che il log a volte attacca al nome (es. "..._070.").
+export const pulisciShard = (s) => (s ? String(s).trim().replace(/[.,;:'"]+$/, "") : s);
+
 // Ricava una regione leggibile dal nome dello shard (es. "pub_euw1b_...").
 export function regioneDaShard(shard) {
   if (!shard) return null;
@@ -68,15 +71,17 @@ export function analizzaRiga(riga, s, adesso = Date.now()) {
   if ((m = riga.match(MODELLI.joinPU))) {
     s.ip = m[1];
     s.porta = Number(m[2]);
-    s.shard = m[3];
-    s.regione = regioneDaShard(m[3]);
+    s.shard = pulisciShard(m[3]);
+    s.regione = regioneDaShard(s.shard);
     s.connessoDa = adesso;
-    return `Entrato nell'universo: shard ${m[3]}`;
+    return `Entrato nell'universo: shard ${s.shard}`;
   }
   if ((m = riga.match(MODELLI.nuovoShard))) {
-    s.shard = m[1];
-    s.regione = regioneDaShard(m[1]) ?? s.regione;
-    return `Cambio shard: ${m[1]}`;
+    const nuovo = pulisciShard(m[1]);
+    if (nuovo === s.shard) return null; // stesso shard già annunciato
+    s.shard = nuovo;
+    s.regione = regioneDaShard(nuovo) ?? s.regione;
+    return `Cambio shard: ${nuovo}`;
   }
   if ((m = riga.match(MODELLI.connessione))) {
     if (s.ip !== m[1]) {
@@ -86,7 +91,7 @@ export function analizzaRiga(riga, s, adesso = Date.now()) {
     return null;
   }
   if ((m = riga.match(MODELLI.sessioneHost))) {
-    s.shard = s.shard ?? m[1];
+    s.shard = s.shard ?? pulisciShard(m[1]);
     s.regione = s.regione ?? regioneDaShard(m[1]);
     return null;
   }

@@ -16,6 +16,13 @@ const TRADUZIONI = {
   PILOT: "PILOTA", GUNNER: "ARTIGLIERE", CREW: "EQUIPAGGIO",
   SPACESHIP: "NAVE SPAZIALE", GROUND: "VEICOLO TERRESTRE", GRAVLEV: "GRAVLEV", BOAT: "IMBARCAZIONE",
 };
+const METODI_PING = {
+  icmp: "ping diretto",
+  tcp: "stima · risposta TCP",
+  datacenter: "stima · datacenter Google dello shard",
+  rete: "stima · ultimo nodo di rete",
+};
+
 const tr = (v) => (v ? TRADUZIONI[v] ?? v : trattino);
 
 function useOrologio() {
@@ -49,19 +56,24 @@ function PannelloServer({ server, ping }) {
     <Pannello
       titolo="SERVER"
       className="largo"
-      extra={ping.metodo === "tcp" ? "ping stimato (TCP)" : ping.metodo === "icmp" ? "ping ICMP" : null}
+      extra={METODI_PING[ping.metodo] ?? (ping.ricerca ? "cerco un modo per misurare il ping…" : null)}
     >
       {!server.ip ? (
         <InAttesa testo="Nessun server rilevato: entra nell'universo di gioco" />
       ) : (
         <div className="server-griglia">
           <div className="ping-blocco">
-            <span className="ping-etichetta">PING</span>
+            <span className="ping-etichetta">{ping.metodo && ping.metodo !== "icmp" ? "PING STIMATO" : "PING"}</span>
             <span className={`ping-valore tono-${tono}`}>
               {ping.ms == null ? "---" : ping.ms}
               <small>ms</small>
             </span>
-            <span className="ping-perdita">Pacchetti persi: {perdita == null ? trattino : percento(perdita)}</span>
+            {ping.metodo ? (
+              <span className="ping-perdita">Pacchetti persi: {perdita == null ? trattino : percento(perdita)}</span>
+            ) : (
+              <span className="ping-perdita">{ping.ricerca ? "Ricerca in corso…" : "Il server non è misurabile"}</span>
+            )}
+            {ping.dettaglio && <span className="ping-perdita">Verso: {ping.dettaglio}</span>}
           </div>
           <GraficoPing storico={ping.storico} />
           <div className="server-dati">

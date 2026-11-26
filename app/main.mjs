@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 import { avviaPonte } from "../ponte/server.mjs";
 import { avviaControlloGioco } from "../ponte/processo.mjs";
 import { creaArchivio, percorsoGameLog, normalizzaCartella } from "./impostazioni.mjs";
+import { creaAggiornamenti } from "./aggiornamenti.mjs";
+import { statoTelemetriaGioco, attivaTelemetriaGioco } from "./telemetria-gioco.mjs";
 
 const cartella = path.dirname(fileURLToPath(import.meta.url));
 const ICONA = path.join(cartella, "icone", "icona.png");
@@ -44,6 +46,7 @@ let tray = null;
 let finestraSchermata = null;
 let finestraImpostazioni = null;
 let fileRegistro;
+let aggiornamenti = { stato: { fase: "non-disponibile" }, controlla: async () => {}, installa: () => {} };
 
 // Registro su file, utile per capire i problemi: %APPDATA%\Telemetria SC\registro.txt
 function scrivi(testo) {
@@ -99,6 +102,12 @@ async function avvio() {
   creaTray();
   applicaAvvioConPC();
 
+  aggiornamenti = creaAggiornamenti({
+    scrivi: (t) => scrivi(`[aggiornamenti] ${t}`),
+    onCambio: () => aggiornaTray(),
+    primaDiInstallare: () => ponte?.chiudi(),
+  });
+
   gioco = avviaControlloGioco(3000, (aperto) => {
     scrivi(aperto ? "Star Citizen aperto" : aperto === false ? "Star Citizen chiuso" : "Stato del gioco sconosciuto");
     aggiornaTray();
@@ -133,12 +142,16 @@ function aggiornaTray() {
       { type: "separator" },
       { label: "Apri schermata", click: () => apriSchermata() },
       { label: "Impostazioni…", click: () => apriImpostazioni() },
+      ...(aggiornamenti.stato.fase === "pronto"
+        ? [{ label: `Installa aggiornamento ${aggiornamenti.stato.versione} e riavvia`, click: () => aggiornamenti.installa() }]
+        : []),
       { type: "separator" },
       {
         label: "Esci",
         click: () => {
           ponte?.chiudi();
-          app.exit(0);
+          // app.quit (non app.exit) permette di installare un aggiornamento già scaricato
+          app.quit();
         },
       },
     ])
@@ -243,8 +256,8 @@ function apriImpostazioni() {
     return;
   }
   finestraImpostazioni = new BrowserWindow({
-    width: 560,
-    height: 720,
+    width: 580,
+    height: 860,
     resizable: true,
     minWidth: 420,
     title: "Telemetria SC — Impostazioni",
@@ -265,10 +278,18 @@ function apriImpostazioni() {
   });
 }
 
-function datiPerImpostazioni() {
+async function datiPerImpostazioni() {
   const gameLog = percorsoGameLog(imp);
+  const server = ponte?.sorgenti()?.server ?? {};
   return {
     imp,
+    telemetriaGioco: {
+      ...(await statoTelemetriaGioco(imp)),
+      // Il Game.log dell'ultimo avvio dice se il gioco ha aperto la porta della telemetria
+      portaNelLog: server.portaTelemetria ?? null,
+      ricevuta: !!ponte?.sorgenti()?.telemetria?.connesso,
+    },
+    aggiornamento: { ...aggiornamenti.stato },
     monitor: elencoMonitor(),
     monitorAttuale: monitorScelto().id,
     gameLog: { percorso: gameLog, trovato: !!gameLog && fs.existsSync(gameLog) },
@@ -310,6 +331,22 @@ ipcMain.handle("imp:sfoglia", async () => {
   });
   if (risultato.canceled || !risultato.filePaths[0]) return null;
   return normalizzaCartella(risultato.filePaths[0]);
+});
+
+ipcMain.handle("telemetria:attiva", async () => {
+  const r = await attivaTelemetriaGioco(imp);
+  scrivi(`Attivazione telemetria: ${r.messaggi.join(" | ")}`);
+  return { messaggi: r.messaggi, dati: await datiPerImpostazioni() };
+});
+
+ipcMain.handle("agg:controlla", async () => {
+  await aggiornamenti.controlla();
+  return datiPerImpostazioni();
+});
+
+ipcMain.handle("agg:installa", () => {
+  aggiornamenti.installa();
+  return true;
 });
 
 ipcMain.handle("schermata:apri", () => {

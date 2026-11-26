@@ -137,3 +137,61 @@ test("Ponte: a gioco chiuso non mostra l'ultimo server del Game.log", async () =
     ponte.chiudi();
   }
 });
+
+test("Shard: toglie la punteggiatura finale", async () => {
+  const { pulisciShard } = await import("../gamelog.mjs");
+  assert.equal(pulisciShard("pub_euw1b_13165946_070."), "pub_euw1b_13165946_070");
+  const s = statoServerVuoto();
+  analizzaRiga("[Notice] <Update Shard Id> New Shard Id: pub_euw1b_13165946_070.", s);
+  assert.equal(s.shard, "pub_euw1b_13165946_070");
+});
+
+test("Ping: legge i tempi da Windows in italiano", async () => {
+  const { leggiTempoPing } = await import("../ping.mjs");
+  assert.equal(leggiTempoPing("Risposta da 1.2.3.4: byte=32 durata=17ms TTL=58"), 17);
+  assert.equal(leggiTempoPing("Risposta da 1.2.3.4: byte=32 durata<1ms TTL=64"), 1);
+  assert.equal(leggiTempoPing("Richiesta scaduta."), null);
+});
+
+test("Ping: trova l'ultimo nodo che risponde (tracert reale)", async () => {
+  const { ultimoNodo } = await import("../ping.mjs");
+  const testo = `
+Traccia instradamento verso 35.205.141.100 su un massimo di 30 punti di passaggio
+
+  1    <1 ms    <1 ms    <1 ms  192.168.178.1
+  2     *        *        *     Richiesta scaduta.
+  3     4 ms     3 ms     4 ms  172.17.70.188
+  4     9 ms     4 ms     5 ms  172.17.64.126
+  5     5 ms     4 ms     5 ms  172.19.177.74
+  6    17 ms    18 ms    17 ms  172.19.177.4
+  7    17 ms    17 ms    17 ms  195.22.196.170
+  8    17 ms    17 ms    17 ms  74.125.51.148
+  9     *        *        *     Richiesta scaduta.
+ 10     *        *        *     Richiesta scaduta.
+
+Traccia completata.`;
+  assert.equal(ultimoNodo(testo, "35.205.141.100"), "74.125.51.148");
+});
+
+test("Datacenter: dall'IP alla regione Google e al punto di test", async () => {
+  const { regioneDaElenco, puntoDiTest, ipNellaRete } = await import("../datacenter.mjs");
+  assert.equal(ipNellaRete("35.205.141.100", "35.205.0.0/16"), true);
+  assert.equal(ipNellaRete("35.206.1.1", "35.205.0.0/16"), false);
+  const elenco = { prefixes: [{ ipv4Prefix: "35.204.0.0/14", scope: "x" }, { ipv4Prefix: "35.205.0.0/16", scope: "europe-west1" }] };
+  assert.equal(regioneDaElenco(elenco, "35.205.141.100"), "europe-west1");
+  const ep = { "europe-west1": { URL: "https://europe-west1-abc.a.run.app/", RegionName: "Belgio" } };
+  assert.deepEqual(puntoDiTest(ep, "europe-west1"), { url: "https://europe-west1-abc.a.run.app", nome: "Belgio" });
+  assert.equal(puntoDiTest(ep, "us-east1"), null);
+});
+
+test("user.cfg: aggiunge e corregge le righe senza toccare il resto", async () => {
+  const { aggiornaTestoUserCfg } = await import("../../app/telemetria-gioco.mjs");
+  const prima = "r_DisplayInfo = 1\r\nserver.game.telemetry.enabled = 0\r\n";
+  const dopo = aggiornaTestoUserCfg(prima, "LIVE");
+  assert.match(dopo, /^r_DisplayInfo = 1\r\n/);
+  assert.match(dopo, /server\.game\.telemetry\.enabled = 1/);
+  assert.match(dopo, /grpc\.client\.server\.enabled = 1/);
+  assert.match(dopo, /grpc\.client\.server\.port = 2942/);
+  assert.equal(aggiornaTestoUserCfg(dopo, "LIVE"), dopo, "seconda volta: nessuna modifica");
+  assert.match(aggiornaTestoUserCfg("", "PTU"), /grpc\.client\.server\.port = 29420/);
+});

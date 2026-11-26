@@ -55,6 +55,15 @@
       button:hover { background: rgba(79, 216, 255, 0.1); }
       button.principale { background: var(--accento); color: var(--sfondo); width: 100%; padding: 10px; font-size: 14px; }
       .piede { color: var(--tenue); font-size: 12px; overflow-wrap: anywhere; }
+      .controlli { display: grid; gap: 4px; }
+      .controllo { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+      .controllo span { color: var(--tenue); }
+      .controllo b { font-weight: 600; text-align: right; }
+      .esito { margin-top: 8px; font-size: 13px; white-space: pre-line; }
+      .esito:empty { display: none; }
+      .pulsanti { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+      .pulsanti button { flex: 1; }
+      button:disabled { opacity: 0.5; cursor: default; }
       #salvato {
         position: fixed; right: 16px; bottom: 16px; background: var(--ok); color: var(--sfondo); padding: 6px 12px;
         border-radius: 4px; font-weight: bold; opacity: 0; transition: opacity 0.2s;
@@ -101,6 +110,18 @@
       </section>
 
       <section>
+        <h2>TELEMETRIA DEL GIOCO</h2>
+        <div class="controlli">
+          <div class="controllo"><span>Variabile di Windows</span><b id="tVariabile">—</b></div>
+          <div class="controllo"><span>File user.cfg</span><b id="tUserCfg">—</b></div>
+          <div class="controllo"><span>Ultimo avvio del gioco</span><b id="tLog">—</b></div>
+          <div class="controllo"><span>Dati ricevuti ora</span><b id="tRicevuta">—</b></div>
+        </div>
+        <button id="attivaTelemetria" type="button" style="margin-top: 10px; width: 100%">ATTIVA TELEMETRIA NEL GIOCO</button>
+        <div class="esito" id="esitoTelemetria"></div>
+      </section>
+
+      <section>
         <h2>SCHERMATA</h2>
         <select id="monitor" aria-label="Monitor della schermata"></select>
         <label class="voce" style="margin-top: 6px">
@@ -110,6 +131,18 @@
             <span>Nella schermata: F11 attiva o disattiva, Esc esce dallo schermo intero.</span>
           </div>
         </label>
+      </section>
+
+      <section>
+        <h2>AGGIORNAMENTI</h2>
+        <div class="controlli">
+          <div class="controllo"><span>Versione installata</span><b id="aVersione">—</b></div>
+          <div class="controllo"><span>Stato</span><b id="aStato">—</b></div>
+        </div>
+        <div class="pulsanti">
+          <button id="controllaAgg" type="button">CERCA AGGIORNAMENTI</button>
+          <button id="installaAgg" type="button" hidden>INSTALLA E RIAVVIA</button>
+        </div>
       </section>
 
       <button class="principale" id="apri" type="button">APRI SCHERMATA ORA</button>

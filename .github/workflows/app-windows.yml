@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# Una costruzione alla volta, così due esecuzioni non pubblicano insieme.
+concurrency:
+  group: app-windows
+  cancel-in-progress: false
+
 jobs:
   windows:
     runs-on: windows-latest
@@ -43,7 +48,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TelemetriaSC-Setup-${{ steps.versione.outputs.v }}
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
 
       - name: Pubblica nella pagina Releases
         uses: softprops/action-gh-release@v2
@@ -52,7 +60,11 @@ jobs:
           name: Telemetria SC ${{ steps.versione.outputs.v }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: release/*.exe
+          # latest.yml e .blockmap servono all'app per aggiornarsi da sola
+          files: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
           body: |
             Installatore per Windows di Telemetria SC.
 
@@ -60,3 +72,5 @@ jobs:
             2. Aprilo. Se Windows mostra "PC protetto da Windows": **Ulteriori informazioni → Esegui comunque**
                (l'app non è firmata digitalmente).
             3. Segui l'installazione. Alla fine si apre la finestra Impostazioni.
+
+            Se hai già la versione 2.1.1 o successiva installata, l'app si aggiorna da sola.

@@ -4,7 +4,7 @@
   "description": "Telemetria di Star Citizen su schermo secondario",
   "author": "alteus83",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.1.1",
   "type": "module",
   "main": "app/main.mjs",
   "scripts": {
@@ -19,6 +19,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.12.5",
     "@grpc/proto-loader": "^0.7.13",
+    "electron-updater": "^6.3.9",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -47,7 +48,14 @@
       "package.json"
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.png",
       "artifactName": "TelemetriaSC-Setup-${version}.${ext}"
     },
@@ -58,10 +66,20 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Telemetria SC",
-      "installerLanguages": ["it_IT"],
+      "installerLanguages": [
+        "it_IT"
+      ],
       "language": "1040",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "alteus83",
+        "repo": "telemetria-sc",
+        "releaseType": "release"
+      }
+    ]
   }
 }

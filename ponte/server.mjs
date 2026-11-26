@@ -124,8 +124,16 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
           }
         : {},
       ping: mostraServer
-        ? { ms: ping.ms, metodo: ping.metodo, storico: ping.storico, perdite: ping.perdite, tentativi: ping.tentativi }
-        : { ms: null, metodo: null, storico: [], perdite: 0, tentativi: 0 },
+        ? {
+            ms: ping.ms,
+            metodo: ping.metodo,
+            dettaglio: ping.dettaglio ?? null,
+            ricerca: !!ping.ricerca,
+            storico: ping.storico,
+            perdite: ping.perdite,
+            tentativi: ping.tentativi,
+          }
+        : { ms: null, metodo: null, dettaglio: null, ricerca: false, storico: [], perdite: 0, tentativi: 0 },
       // Se la telemetria è ferma non mostriamo dati vecchi come se fossero veri.
       nave: telemetriaViva ? ultimiDati.nave : null,
       armi: telemetriaViva ? ultimiDati.armi : null,

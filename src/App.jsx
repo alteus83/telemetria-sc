@@ -1,29 +1,40 @@
 import { useEffect, useState } from "react";
 import { usePonte } from "./usePonte.js";
 import {
-  Pannello, Riga, Barra, Spia, Sigla, GraficoPing,
-  numero, percento, distanza, durata, tonoPing, trattino,
-} from "./componenti.jsx";
+  Cornice, Quadrante, Anello, Segmenti, NaveScudi, Bussola, NastroVerticale, Esagono, Targhetta,
+  GraficoPing, Battito, numero, distanza, durata, percento, trattino,
+} from "./hud/strumenti.jsx";
 
 const SPIE = ["pwr", "wpn", "thr", "shld", "cool", "qdrv", "radr", "prox", "hit", "misl"];
 const IFCS = ["CPL", "ESP", "GRC", "GSF", "CRU", "LIM", "PRX", "ATT", "STB", "COR", "VNT", "CMD"];
 const POTENZA = ["REA", "MOT", "ARM", "RAF", "VIT", "GRA", "SEN", "GSC", "ESC"];
+
+const METODI_PING = {
+  icmp: "DIRETTO",
+  tcp: "STIMA · TCP",
+  datacenter: "STIMA · DATACENTER",
+  rete: "STIMA · NODO DI RETE",
+};
 
 const TRADUZIONI = {
   SCM: "SCM", NAVIGATION: "NAV", STEALTH: "STEALTH",
   RETRACTED: "SU", DEPLOYED: "GIÙ", DEPLOYING: "IN DISCESA", RETRACTING: "IN SALITA",
   SEATED: "SEDUTO", ON_FOOT: "A PIEDI", EVA: "EVA",
   PILOT: "PILOTA", GUNNER: "ARTIGLIERE", CREW: "EQUIPAGGIO",
-  SPACESHIP: "NAVE SPAZIALE", GROUND: "VEICOLO TERRESTRE", GRAVLEV: "GRAVLEV", BOAT: "IMBARCAZIONE",
 };
-const METODI_PING = {
-  icmp: "ping diretto",
-  tcp: "stima · risposta TCP",
-  datacenter: "stima · datacenter Google dello shard",
-  rete: "stima · ultimo nodo di rete",
-};
-
 const tr = (v) => (v ? TRADUZIONI[v] ?? v : trattino);
+
+// La schermata è disegnata a 1920×1080 e si adatta a qualsiasi finestra.
+function useScala() {
+  const [s, setS] = useState(1);
+  useEffect(() => {
+    const calcola = () => setS(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    calcola();
+    window.addEventListener("resize", calcola);
+    return () => window.removeEventListener("resize", calcola);
+  }, []);
+  return s;
+}
 
 function useOrologio() {
   const [ora, setOra] = useState(() => new Date());
@@ -34,231 +45,205 @@ function useOrologio() {
   return ora.toLocaleTimeString("it-IT", { hour12: false });
 }
 
-function Indicatore({ nome, acceso, titolo }) {
+function Luce({ nome, acceso }) {
   return (
-    <span className={`indicatore ${acceso ? "indicatore-on" : "indicatore-off"}`} title={titolo}>
-      <span className="indicatore-punto" />
+    <span className={`luce ${acceso ? "on" : "off"}`}>
+      <i />
       {nome}
     </span>
   );
 }
 
-function InAttesa({ testo = "In attesa dei dati" }) {
-  return <p className="in-attesa">{testo}…</p>;
+function Dato({ etichetta, valore, tono }) {
+  return (
+    <div className="dato">
+      <span>{etichetta}</span>
+      <b className={tono ? `tono-${tono}` : ""}>{valore ?? trattino}</b>
+    </div>
+  );
 }
+
+const tonoPing = (ms) => (ms == null ? "spento" : ms < 80 ? "ok" : ms < 150 ? "attenzione" : "critico");
 
 // ---------------------------------------------------------------------------
 
-function PannelloServer({ server, ping }) {
-  const tono = tonoPing(ping.ms);
+function Server({ server, ping }) {
   const perdita = ping.tentativi ? ping.perdite / ping.tentativi : null;
+  const tono = tonoPing(ping.ms);
   return (
-    <Pannello
-      titolo="SERVER"
-      className="largo"
-      extra={METODI_PING[ping.metodo] ?? (ping.ricerca ? "cerco un modo per misurare il ping…" : null)}
-    >
-      {!server.ip ? (
-        <InAttesa testo="Nessun server rilevato: entra nell'universo di gioco" />
-      ) : (
-        <div className="server-griglia">
-          <div className="ping-blocco">
-            <span className="ping-etichetta">{ping.metodo && ping.metodo !== "icmp" ? "PING STIMATO" : "PING"}</span>
-            <span className={`ping-valore tono-${tono}`}>
-              {ping.ms == null ? "---" : ping.ms}
-              <small>ms</small>
-            </span>
-            {ping.metodo ? (
-              <span className="ping-perdita">Pacchetti persi: {perdita == null ? trattino : percento(perdita)}</span>
-            ) : (
-              <span className="ping-perdita">{ping.ricerca ? "Ricerca in corso…" : "Il server non è misurabile"}</span>
-            )}
-            {ping.dettaglio && <span className="ping-perdita">Verso: {ping.dettaglio}</span>}
-          </div>
+    <Cornice titolo="SERVER" extra={METODI_PING[ping.metodo] ?? (ping.ricerca ? "RICERCA…" : null)} className="c-server">
+      <div className="ping-zona">
+        <Quadrante
+          valore={ping.ms}
+          max={300}
+          tacche={12}
+          lancetta={false}
+          tono={tono}
+          zone={[{ da: 0, a: 80, tono: "ok" }, { da: 80, a: 150, tono: "attenzione" }, { da: 150, a: 300, tono: "critico" }]}
+        >
+          <text x="110" y="128" className={`quadrante-numero tono-${tono}`}>{ping.ms ?? "---"}</text>
+          <text x="110" y="150" className="quadrante-unita">MS · PING</text>
+        </Quadrante>
+        <div className="ping-lato">
+          <Dato etichetta="PERSI" valore={ping.metodo ? percento(perdita) : trattino} tono={perdita > 0.05 ? "attenzione" : null} />
+          <Dato etichetta="VERSO" valore={ping.dettaglio ?? (server.ip ? "server" : null)} />
           <GraficoPing storico={ping.storico} />
-          <div className="server-dati">
-            <Riga etichetta="REGIONE" valore={server.regione} />
-            <Riga etichetta="SHARD" valore={server.shard} />
-            <Riga etichetta="IP" valore={server.ip ? `${server.ip}${server.porta ? `:${server.porta}` : ""}` : null} />
-            <Riga etichetta="CONNESSO DA" valore={durata(server.connessoDaSecondi)} />
-            <Riga etichetta="UPTIME SERVER" valore={server.uptimeSecondi != null ? durata(server.uptimeSecondi) : null} />
-            <Riga etichetta="AMBIENTE" valore={server.ambiente} />
-            <Riga etichetta="BUILD" valore={server.build} />
-          </div>
+        </div>
+      </div>
+      {!server.ip ? (
+        <p className="attesa">Nessun server: entra nell'universo di gioco</p>
+      ) : (
+        <div className="dati-colonna">
+          <Dato etichetta="REGIONE" valore={server.regione} />
+          <Dato etichetta="CONNESSO" valore={durata(server.connessoDaSecondi)} />
+          <Dato etichetta="SHARD" valore={server.shard} />
+          <Dato etichetta="IP" valore={server.ip} />
+          <Dato etichetta="AMBIENTE" valore={server.ambiente} />
+          <Dato etichetta="BUILD" valore={server.build} />
         </div>
       )}
-    </Pannello>
+    </Cornice>
   );
 }
 
-function PannelloNave({ nave }) {
+function Eventi({ eventi }) {
   return (
-    <Pannello titolo="NAVE" extra={nave ? (nave.spool ? "SPOOL" : null) : null}>
-      {!nave ? (
-        <InAttesa testo="Non sei in una nave" />
-      ) : (
-        <>
-          <p className="nave-nome">{nave.nome}</p>
-          <Riga etichetta="COSTRUTTORE" valore={nave.produttore} />
-          <Riga etichetta="MODALITÀ" valore={tr(nave.modalita)} />
-          <Riga etichetta="STATO" valore={nave.atterrata ? "ATTERRATA" : "IN VOLO"} />
-          <Riga etichetta="CARRELLO" valore={tr(nave.carrello)} />
-          <Riga etichetta="LUCI" valore={nave.luci ? "ACCESE" : "SPENTE"} tono={nave.luci ? "ok" : "spento"} />
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloVolo({ nave }) {
-  const v = nave?.volo;
-  return (
-    <Pannello titolo="VOLO">
-      {!v ? (
-        <InAttesa />
-      ) : (
-        <>
-          <div className="grande-valore">
-            {numero(v.velocita)}
-            <small>m/s</small>
-          </div>
-          <Riga etichetta="VEL. VERTICALE" valore={v.velocitaVerticale == null ? null : `${v.velocitaVerticale >= 0 ? "+" : ""}${numero(v.velocitaVerticale)} m/s`} />
-          <Riga etichetta="G" valore={v.g == null ? null : `${v.g >= 0 ? "+" : ""}${numero(v.g, 1)} G`} tono={v.g != null && Math.abs(v.g) > 6 ? "critico" : null} />
-          <Riga etichetta="ALTITUDINE" valore={distanza(v.altitudine)} />
-          <Riga etichetta="ALT. RADAR" valore={distanza(v.altitudineRadar)} />
-          <Riga etichetta="PRUA" valore={v.prua == null ? null : `${numero(v.prua)}°`} />
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloSistemi({ nave }) {
-  const s = nave?.sistemi;
-  return (
-    <Pannello titolo="SISTEMI" extra={s?.boost?.attivo ? "BOOST ATTIVO" : null}>
-      {!s ? (
-        <InAttesa />
-      ) : (
-        <>
-          <Barra etichetta="SCUDI" rapporto={s.scudi} />
-          <Barra etichetta="SCAFO" rapporto={nave.scafo != null && nave.scafo <= 1 ? nave.scafo : null} />
-          <Barra etichetta="IDROGENO" rapporto={s.idrogeno} />
-          <Barra etichetta="QUANTUM" rapporto={s.quantum} />
-          <Barra etichetta="BOOST" rapporto={s.boost?.riserva} />
-          {s.facceScudi?.length > 0 && (
-            <div className="facce-scudi" title="Scudi per lato">
-              {s.facceScudi.map((f, i) => (
-                <span key={i} className="faccia" style={{ opacity: 0.25 + (f ?? 0) * 0.75 }}>
-                  {percento(f)}
-                </span>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloSpie({ nave }) {
-  return (
-    <Pannello titolo="SPIE">
-      {!nave ? (
-        <InAttesa />
-      ) : (
-        <div className="griglia-spie">
-          {SPIE.map((k) => (
-            <Spia key={k} nome={k.toUpperCase()} stato={nave.spie?.[k]} />
-          ))}
-        </div>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloIfcs({ nave }) {
-  return (
-    <Pannello titolo="IFCS E POTENZA">
-      {!nave ? (
-        <InAttesa />
-      ) : (
-        <>
-          <div className="gruppo-sigle">
-            <span className="riga-etichetta">IFCS</span>
-            <div className="sigle">
-              {IFCS.map((k) => (
-                <Sigla key={k} nome={k} acceso={nave.ifcs?.[k]?.attivo} disponibile={nave.ifcs?.[k]?.abilitato !== false} />
-              ))}
-            </div>
-          </div>
-          <div className="gruppo-sigle">
-            <span className="riga-etichetta">POT.</span>
-            <div className="sigle">
-              {POTENZA.map((k) => (
-                <Sigla key={k} nome={k} acceso={nave.potenza?.[k]} />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloArmi({ armi }) {
-  return (
-    <Pannello titolo="ARMI" extra={armi?.gimbalBloccati ? "G.LOCK" : null}>
-      {!armi ? (
-        <InAttesa />
-      ) : (
-        <>
-          <Riga etichetta="PRONTE" valore={`${armi.pronte}/${armi.totali}`} tono={armi.pronte < armi.totali ? "attenzione" : "ok"} />
-          <Riga etichetta="PRESET" valore={armi.preset} />
-          <Riga etichetta="DECOY" valore={armi.decoy} />
-          <Riga etichetta="NOISE" valore={armi.noise} />
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloPersonaggio({ p }) {
-  return (
-    <Pannello titolo="PERSONAGGIO" extra={p?.aria ? "ARIA RESPIRABILE" : p ? "ARIA NON RESPIRABILE" : null}>
-      {!p ? (
-        <InAttesa />
-      ) : (
-        <>
-          <Barra etichetta="SALUTE" rapporto={p.salute?.rapporto} />
-          <Barra etichetta="OSSIGENO" rapporto={p.ossigeno?.rapporto} />
-          {p.fame && <Barra etichetta="FAME" rapporto={p.fame.rapporto} invertita />}
-          {p.sete && <Barra etichetta="SETE" rapporto={p.sete.rapporto} invertita />}
-          <Riga etichetta="BATTITO" valore={p.battito == null ? null : `${numero(p.battito)} BPM`} />
-          <Riga etichetta="POSIZIONE" valore={`${tr(p.posizione)}${p.ruolo ? ` · ${tr(p.ruolo)}` : ""}`} />
-          <Riga etichetta="aUEC" valore={p.auec == null ? null : numero(p.auec)} />
-          <Riga etichetta="TEMP. ESTERNA" valore={p.temperaturaEsterna == null ? null : `${numero(p.temperaturaEsterna)} °C`} />
-        </>
-      )}
-    </Pannello>
-  );
-}
-
-function PannelloEventi({ eventi }) {
-  return (
-    <Pannello titolo="EVENTI" className="eventi">
+    <Cornice titolo="REGISTRO EVENTI" className="c-eventi">
       {!eventi?.length ? (
-        <InAttesa testo="Nessun evento" />
+        <p className="attesa">Nessun evento</p>
       ) : (
         <ul className="registro">
-          {eventi.slice(0, 12).map((e, i) => (
+          {eventi.slice(0, 9).map((e, i) => (
             <li key={`${e.ora}-${i}`}>
-              <span className="registro-ora">{e.ora}</span> {e.testo}
+              <span>{e.ora}</span>
+              {e.testo}
             </li>
           ))}
         </ul>
       )}
-    </Pannello>
+    </Cornice>
+  );
+}
+
+const altPasso = (a) => (a == null ? 100 : Math.abs(a) > 20000 ? 1000 : Math.abs(a) > 2000 ? 250 : 50);
+const distanzaBreve = (m) => (Math.abs(m) >= 10000 ? `${numero(m / 1000, 1)}k` : numero(m));
+
+function Centro({ nave }) {
+  const v = nave?.volo;
+  const massimo = nave?.modalita === "NAVIGATION" ? 1500 : 450;
+  return (
+    <div className="centro">
+      <div className="centro-testa">
+        <div>
+          <div className="nave-nome">{nave?.nome ?? "NESSUNA NAVE"}</div>
+          <div className="nave-sotto">{nave ? nave.produttore ?? "" : "Siediti ai comandi di una nave"}</div>
+        </div>
+        <div className="nave-stati">
+          <Targhetta nome={tr(nave?.modalita)} acceso={!!nave} />
+          <Targhetta nome="SPOOL" acceso={!!nave?.spool} />
+          <Targhetta nome={nave ? (nave.atterrata ? "ATTERRATA" : "IN VOLO") : "—"} acceso={!!nave} />
+          <Targhetta nome={`CARRELLO ${tr(nave?.carrello)}`} acceso={!!nave} />
+          <Targhetta nome="LUCI" acceso={!!nave?.luci} />
+        </div>
+      </div>
+
+      <div className="centro-corpo">
+        <NastroVerticale valore={v?.altitudine ?? null} passo={altPasso(v?.altitudine)} etichetta="ALTITUDINE" formato={distanzaBreve} />
+        <NaveScudi nave={nave} massimoVelocita={massimo} />
+        <div className="centro-destra">
+          <div className="mini-quadrante">
+            <Quadrante valore={v?.g ?? null} min={-5} max={15} tacche={10} r={70} spessore={8} dimensione={180} lancetta={false}
+              tono={v?.g != null && Math.abs(v.g) > 7 ? "critico" : v?.g != null && Math.abs(v.g) > 4 ? "attenzione" : "ok"}>
+              <text x="90" y="104" className="quadrante-numero piccolo">{v?.g == null ? "--" : numero(v.g, 1)}</text>
+              <text x="90" y="124" className="quadrante-unita">G</text>
+            </Quadrante>
+          </div>
+          <Dato etichetta="VEL. VERTICALE" valore={v?.velocitaVerticale == null ? null : `${v.velocitaVerticale >= 0 ? "+" : ""}${numero(v.velocitaVerticale)} m/s`} />
+          <Dato etichetta="ALT. RADAR" valore={distanza(v?.altitudineRadar ?? null)} />
+          <Dato etichetta="PRUA" valore={v?.prua == null ? null : `${String(Math.round(v.prua) % 360).padStart(3, "0")}°`} />
+          <Dato etichetta="SCAFO" valore={percento(nave?.scafo != null && nave.scafo <= 1 ? nave.scafo : null)} />
+        </div>
+      </div>
+
+      <div className="centro-piede">
+        <div className="spie">
+          {SPIE.map((k) => (
+            <Esagono key={k} nome={k.toUpperCase()} stato={nave ? nave.spie?.[k] : null} />
+          ))}
+        </div>
+        <div className="targhette">
+          <span className="targhette-titolo">IFCS</span>
+          {IFCS.map((k) => (
+            <Targhetta key={k} nome={k} acceso={nave?.ifcs?.[k]?.attivo} disponibile={nave?.ifcs?.[k]?.abilitato !== false} />
+          ))}
+        </div>
+        <div className="targhette">
+          <span className="targhette-titolo">POTENZA</span>
+          {POTENZA.map((k) => (
+            <Targhetta key={k} nome={k} acceso={nave?.potenza?.[k]} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sistemi({ nave }) {
+  const s = nave?.sistemi;
+  return (
+    <Cornice titolo="SISTEMI" extra={s?.boost?.attivo ? "BOOST ATTIVO" : null} className="c-sistemi">
+      <div className="anelli">
+        <Anello rapporto={s?.idrogeno} etichetta="IDROGENO" />
+        <Anello rapporto={s?.quantum} etichetta="QUANTUM" />
+        <Anello rapporto={s?.scudi} etichetta="SCUDI" />
+      </div>
+      <Segmenti rapporto={s?.boost?.riserva} etichetta="BOOST" />
+    </Cornice>
+  );
+}
+
+function Armi({ armi }) {
+  return (
+    <Cornice titolo="ARMI" extra={armi?.gimbalBloccati ? "GIMBAL BLOCCATI" : null} className="c-armi">
+      <div className="armi-pronte">
+        <div className="pip-fila">
+          {armi
+            ? Array.from({ length: Math.max(armi.totali, 1) }, (_, i) => <span key={i} className={`pip ${i < armi.pronte ? "on" : ""}`} />)
+            : <span className="attesa">—</span>}
+        </div>
+        <span className="armi-conteggio">{armi ? `${armi.pronte}/${armi.totali} PRONTE` : "NESSUN DATO"}</span>
+      </div>
+      <div className="contatori">
+        <div className="contatore">
+          <b>{armi?.decoy ?? "--"}</b>
+          <span>DECOY</span>
+        </div>
+        <div className="contatore">
+          <b>{armi?.noise ?? "--"}</b>
+          <span>NOISE</span>
+        </div>
+        <div className="contatore">
+          <b>{armi?.preset ?? "--"}</b>
+          <span>PRESET</span>
+        </div>
+      </div>
+    </Cornice>
+  );
+}
+
+function Personaggio({ p }) {
+  return (
+    <Cornice titolo="PILOTA" extra={p ? (p.aria ? "ARIA OK" : "NO ARIA") : null} className="c-pilota">
+      <div className="pilota-riga">
+        <Anello rapporto={p?.salute?.rapporto} etichetta="SALUTE" dimensione={84} />
+        <Anello rapporto={p?.ossigeno?.rapporto} etichetta="OSSIGENO" dimensione={84} />
+        <Battito bpm={p?.battito ?? null} />
+      </div>
+      <div className="dati-colonna">
+        <Dato etichetta="POSIZIONE" valore={p ? `${tr(p.posizione)}${p.ruolo ? ` · ${tr(p.ruolo)}` : ""}` : null} />
+        <Dato etichetta="aUEC" valore={p?.auec == null ? null : numero(p.auec)} />
+      </div>
+    </Cornice>
   );
 }
 
@@ -266,65 +251,51 @@ function PannelloEventi({ eventi }) {
 
 export default function App() {
   const { dati, collegato } = usePonte();
+  const scala = useScala();
   const orologio = useOrologio();
   const st = dati?.stato;
+  const nave = dati?.nave ?? null;
+
+  let avviso = null;
+  if (!collegato) avviso = { tono: "critico", testo: "Collegamento interrotto con il motore della telemetria" };
+  else if (st && !st.log) avviso = { tono: "critico", testo: "Game.log non trovato: controlla la cartella del gioco nelle Impostazioni" };
+  else if (st?.gioco === false) avviso = { tono: "attenzione", testo: "Star Citizen è chiuso: i dati compariranno quando avvii il gioco" };
+  else if (st && !st.telemetria)
+    avviso = { tono: "attenzione", testo: "Telemetria non ricevuta: Impostazioni → Attiva telemetria nel gioco. Ping e server funzionano comunque" };
 
   return (
     <div className="schermo">
-      <header className="testata">
-        <div className="testata-titolo">
-          TELEMETRIA SC <span className="testata-sotto">STAR CITIZEN</span>
-          {dati?.demo && <span className="badge-demo">DEMO</span>}
-        </div>
-        <div className="testata-stato">
-          {st?.gioco != null && (
-            <Indicatore nome="GIOCO" acceso={st.gioco} titolo={st.gioco ? "Star Citizen è aperto" : "Star Citizen è chiuso"} />
-          )}
-          <Indicatore nome="LOG" acceso={!!st?.log} titolo={st?.erroreLog ?? "Game.log trovato"} />
-          <Indicatore
-            nome={st?.telemetria ? `TELEMETRIA ${st.pacchettiAlSecondo} PKT/S` : "TELEMETRIA"}
-            acceso={!!st?.telemetria}
-            titolo={st?.erroreTelemetria ?? "Telemetria del gioco"}
-          />
-          <span className="orologio">{orologio}</span>
-        </div>
-      </header>
+      <div className="scena" style={{ transform: `translate(-50%, -50%) scale(${scala})` }}>
+        <header className="testata">
+          <div className="testata-sx">
+            <span className="logo">TELEMETRIA SC</span>
+            {st?.versione && <span className="distintivo">{st.versione}</span>}
+            {dati?.demo && <span className="distintivo demo">DEMO</span>}
+          </div>
+          <Bussola prua={nave?.volo?.prua ?? null} />
+          <div className="testata-dx">
+            {st?.gioco != null && <Luce nome="GIOCO" acceso={st.gioco} />}
+            <Luce nome="LOG" acceso={!!st?.log} />
+            <Luce nome={st?.telemetria ? `TELEM ${st.pacchettiAlSecondo}/S` : "TELEM"} acceso={!!st?.telemetria} />
+            <span className="orologio">{orologio}</span>
+          </div>
+        </header>
 
-      {!collegato && (
-        <div className="avviso">
-          Collegamento interrotto con il motore della telemetria. Se usi l'app, riaprila dall'icona vicino
-          all'orologio; se usi il ponte da terminale, avvialo con <code>npm run ponte</code>.
-        </div>
-      )}
-      {collegato && st && !st.log && (
-        <div className="avviso">
-          Game.log non trovato{st.percorsoLog ? <> in <code>{st.percorsoLog}</code></> : null}. Controlla la cartella
-          del gioco nelle Impostazioni.
-        </div>
-      )}
-      {collegato && st?.log && st.gioco === false && (
-        <div className="avviso avviso-lieve">Star Citizen è chiuso. I dati compariranno quando avvii il gioco.</div>
-      )}
-      {collegato && st?.log && st.gioco !== false && !st.telemetria && (
-        <div className="avviso avviso-lieve">
-          Telemetria del gioco non ricevuta. Il gioco deve essere aperto, con il personaggio in gioco e la telemetria
-          attivata (vedi LEGGIMI.md). Ping e dati del server funzionano comunque dal Game.log.
-        </div>
-      )}
+        {avviso && <div className={`avviso tono-bordo-${avviso.tono}`}>{avviso.testo}</div>}
 
-      {dati && (
-        <main className="griglia">
-          <PannelloServer server={dati.server} ping={dati.ping} />
-          <PannelloNave nave={dati.nave} />
-          <PannelloVolo nave={dati.nave} />
-          <PannelloSistemi nave={dati.nave} />
-          <PannelloSpie nave={dati.nave} />
-          <PannelloIfcs nave={dati.nave} />
-          <PannelloArmi armi={dati.armi} />
-          <PannelloPersonaggio p={dati.personaggio} />
-          <PannelloEventi eventi={dati.eventi} />
+        <main className="cruscotto">
+          <div className="colonna">
+            {dati && <Server server={dati.server} ping={dati.ping} />}
+            {dati && <Eventi eventi={dati.eventi} />}
+          </div>
+          <Centro nave={nave} />
+          <div className="colonna">
+            <Sistemi nave={nave} />
+            <Armi armi={dati?.armi ?? null} />
+            <Personaggio p={dati?.personaggio ?? null} />
+          </div>
         </main>
-      )}
+      </div>
     </div>
   );
 }

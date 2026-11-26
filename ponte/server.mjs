@@ -101,6 +101,7 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
       demo,
       ora: Date.now(),
       stato: {
+        versione: demo ? "LIVE" : configAttuale.versione ?? null, // "LIVE" | "PTU"
         gioco: aperto,
         log: lettore.trovato,
         erroreLog: lettore.errore,

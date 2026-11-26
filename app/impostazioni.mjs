@@ -38,6 +38,28 @@ export function cercaCartellaGioco() {
   return null;
 }
 
+// Riconoscimento di riserva: il canale il cui Game.log è stato modificato da poco
+// (il gioco lo crea appena parte). Restituisce { canale, cartellaCanale, cartellaGioco, gameLog } o null.
+const CANALI = ["LIVE", "PTU", "EPTU", "TECH-PREVIEW", "HOTFIX"];
+export function canaleDaLogRecente(cartellaGioco, entroMs = 120000) {
+  if (!cartellaGioco) return null;
+  let migliore = null;
+  for (const canale of CANALI) {
+    const gameLog = path.join(cartellaGioco, canale, "Game.log");
+    try {
+      const t = fs.statSync(gameLog).mtimeMs;
+      if (Date.now() - t <= entroMs && (!migliore || t > migliore.t)) {
+        migliore = { t, canale, cartellaCanale: path.join(cartellaGioco, canale), cartellaGioco, gameLog };
+      }
+    } catch {
+      /* canale non installato */
+    }
+  }
+  if (!migliore) return null;
+  const { t, ...info } = migliore;
+  return info;
+}
+
 export function percorsoGameLog(imp) {
   if (!imp.cartellaGioco) return "";
   return path.join(imp.cartellaGioco, imp.versione || "LIVE", "Game.log");

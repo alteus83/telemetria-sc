@@ -216,3 +216,11 @@ test("Ping: legge i tempi da Windows in altre lingue", async () => {
   // codifica rovinata: vale la riserva prima di TTL=
   assert.equal(leggiTempoPing("ЋвўҐв ®в 1.2.3.4: зЁб«® Ў ©в=32 ўаҐ¬п=33¬б TTL=58"), 33);
 });
+
+test("Datacenter: punto di test in forme diverse della risposta", async () => {
+  const { puntoDiTest } = await import("../datacenter.mjs");
+  assert.equal(puntoDiTest([{ region: "us-east4", url: "https://a/" }], "us-east4").url, "https://a");
+  assert.equal(puntoDiTest({ "us-east4": "https://us-east4-x.a.run.app" }, "us-east4").url, "https://us-east4-x.a.run.app");
+  assert.equal(puntoDiTest({ regioni: { qualcosa: { link: "https://us-east4-y.a.run.app/" } } }, "us-east4").url, "https://us-east4-y.a.run.app");
+  assert.equal(puntoDiTest({ "us-east1": { URL: "https://us-east1-z.a.run.app" } }, "us-east4"), null);
+});

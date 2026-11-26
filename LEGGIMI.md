@@ -47,8 +47,14 @@ Non serve installare nient'altro (niente Node.js, niente comandi).
 | **Schermo intero** | Nella schermata: **F11** attiva/disattiva, **Esc** esce dallo schermo intero |
 | **Lingua** | AUTOMATICA (quella di Windows), ITALIANO o ENGLISH: vale per schermata, Impostazioni e menu |
 
-Le impostazioni si salvano subito. Per riaprirle: tasto destro sull'icona vicino
-all'orologio → **Impostazioni…** (oppure riapri l'app dal menu Start).
+Le impostazioni si salvano subito. Per riaprirle:
+- sulla schermata, pulsante **⚙ F2** in alto a destra (oppure il tasto **F2**);
+- tasto destro sull'icona vicino all'orologio → **Impostazioni…** (su Windows 11 l'icona può
+  essere nascosta sotto la freccetta **^**);
+- oppure riapri l'app dal menu Start.
+
+La schermata si adatta da sola ai **monitor verticali** (più alti che larghi) con un cruscotto
+disposto in verticale.
 
 ## 3. Attivare la telemetria nel gioco
 
@@ -89,6 +95,10 @@ Local services server is running on 127.0.0.1:XXXX
 ```
 
 I dati arrivano **solo quando il personaggio è in gioco** (non nel menu).
+
+L'app prova da sola anche **tutte le porte su cui il gioco è in ascolto**, nel caso una build
+apra la telemetria su una porta diversa da quella richiesta. Nel registro (punto 6) trovi le
+porte provate e il motivo per cui non hanno risposto.
 
 ## 4. Le spie in alto nella schermata
 

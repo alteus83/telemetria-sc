@@ -111,6 +111,15 @@ body {
 .luce.on i { background: var(--verde); box-shadow: 0 0 10px var(--verde); }
 .luce.off { color: var(--tenue); }
 .luce.off i { background: var(--critico); box-shadow: 0 0 8px var(--critico); }
+.pulsante-impostazioni {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer;
+  background: rgba(79, 216, 255, 0.1); color: var(--accento); border: 1px solid var(--accento);
+  font-family: var(--titoli); font-size: 12px; letter-spacing: 0.1em;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+.pulsante-impostazioni:hover { background: rgba(79, 216, 255, 0.25); }
+.pulsante-impostazioni:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.pulsante-impostazioni svg { width: 20px; height: 20px; fill: currentColor; }
 .orologio { font-size: 28px; font-weight: 700; color: var(--accento); text-shadow: 0 0 10px rgba(79, 216, 255, 0.6); }
 
 .bussola { width: 760px; height: 60px; }
@@ -168,6 +177,7 @@ body {
 .dato { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 17px; border-bottom: 1px solid rgba(31, 90, 134, 0.35); }
 .dato span { color: var(--tenue); letter-spacing: 0.06em; white-space: nowrap; }
 .dato b { font-weight: 600; text-align: right; overflow-wrap: anywhere; color: #e2f7ff; }
+.ping-lato .dato b { white-space: nowrap; overflow-wrap: normal; }
 .dati-colonna { display: flex; flex-direction: column; }
 .dati-griglia { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
 
@@ -293,3 +303,29 @@ svg text { font-family: var(--titoli); }
 @keyframes scorri { from { transform: translateX(0); } to { transform: translateX(-100px); } }
 .battito-valore { font-family: var(--titoli); font-size: 30px; font-weight: 700; color: #fff; position: relative; margin-top: auto; }
 .battito-unita { font-family: var(--titoli); font-size: 11px; color: var(--tenue); letter-spacing: 0.14em; position: relative; }
+
+/* ---------- monitor verticale (1080×1920) ---------- */
+.scena.verticale { width: 1080px; height: 1920px; }
+.verticale .testata { grid-template-columns: 1fr auto; grid-template-rows: 60px 60px; height: auto; row-gap: 4px; }
+.verticale .testata-sx { grid-row: 1; grid-column: 1; }
+.verticale .testata-dx { grid-row: 1; grid-column: 2; }
+.verticale .testata .bussola { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+.verticale .avviso { width: 100%; }
+.verticale .cruscotto {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-areas: "server server" "centro centro" "sistemi armi" "pilota eventi";
+  gap: 18px;
+}
+.verticale .colonna { display: contents; }
+.verticale .c-server { grid-area: server; }
+.verticale .centro { grid-area: centro; }
+.verticale .c-sistemi { grid-area: sistemi; }
+.verticale .c-armi { grid-area: armi; }
+.verticale .c-pilota { grid-area: pilota; }
+.verticale .c-eventi { grid-area: eventi; }
+.verticale .c-server .cornice-corpo { display: grid; grid-template-columns: 540px 1fr; gap: 26px; align-items: center; }
+.verticale .c-server .ping-zona { margin: 0; }
+.verticale .centro-testa { padding-bottom: 4px; }
+.verticale .centro-corpo { flex: none; }
+.verticale .centro-piede { padding-top: 0; }

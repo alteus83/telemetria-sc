@@ -15,11 +15,17 @@ function useTr() {
   return (v) => (v ? T.stati[v] ?? v : trattino);
 }
 
-// La schermata è disegnata a 1920×1080 e si adatta a qualsiasi finestra.
+// La schermata è disegnata a 1920×1080 (orizzontale) o 1080×1920 (verticale, per i
+// monitor ruotati) e si adatta a qualsiasi finestra. Sceglie da sola in base alla forma.
 function useScala() {
-  const [s, setS] = useState(1);
+  const [s, setS] = useState({ scala: 1, verticale: false });
   useEffect(() => {
-    const calcola = () => setS(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    const calcola = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const verticale = h > w;
+      setS({ verticale, scala: verticale ? Math.min(w / 1080, h / 1920) : Math.min(w / 1920, h / 1080) });
+    };
     calcola();
     window.addEventListener("resize", calcola);
     return () => window.removeEventListener("resize", calcola);
@@ -258,7 +264,19 @@ function Personaggio({ p }) {
 
 export default function App() {
   const { dati, collegato } = usePonte();
-  const scala = useScala();
+  const { scala, verticale } = useScala();
+  // F2 = Impostazioni (solo dentro l'app per Windows)
+  useEffect(() => {
+    if (!window.telemetriaApp) return;
+    const tasto = (e) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        window.telemetriaApp.apriImpostazioni();
+      }
+    };
+    window.addEventListener("keydown", tasto);
+    return () => window.removeEventListener("keydown", tasto);
+  }, []);
   const st = dati?.stato;
   const lingua = st?.lingua === "it" || st?.lingua === "en" ? st.lingua : linguaBrowser();
   const T = TESTI[lingua];
@@ -275,7 +293,7 @@ export default function App() {
   return (
     <ContestoLingua.Provider value={T}>
       <div className="schermo">
-        <div className="scena" style={{ transform: `translate(-50%, -50%) scale(${scala})` }}>
+        <div className={`scena ${verticale ? "verticale" : ""}`} style={{ transform: `translate(-50%, -50%) scale(${scala})` }}>
           <header className="testata">
             <div className="testata-sx">
               <span className="logo">TELEMETRIA SC</span>
@@ -288,6 +306,20 @@ export default function App() {
               <Luce nome={T.log} acceso={!!st?.log} />
               <Luce nome={st?.telemetria ? `${T.telem} ${st.pacchettiAlSecondo}/S` : T.telem} acceso={!!st?.telemetria} />
               <span className="orologio">{orologio}</span>
+              {window.telemetriaApp && (
+                <button
+                  type="button"
+                  className="pulsante-impostazioni"
+                  title={T.apriImpostazioni}
+                  aria-label={T.apriImpostazioni}
+                  onClick={() => window.telemetriaApp.apriImpostazioni()}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.2 4.7-.1-2.4 2-1.6-2-3.4-2.4.8a8 8 0 0 0-2-1.2L15.2 3h-4l-.5 2.4a8 8 0 0 0-2 1.2l-2.4-.8-2 3.4 2 1.6-.1 1.2.1 1.2-2 1.6 2 3.4 2.4-.8a8 8 0 0 0 2 1.2l.5 2.4h4l.5-2.4a8 8 0 0 0 2-1.2l2.4.8 2-3.4-2-1.6.1-1.2Z" />
+                  </svg>
+                  <span>F2</span>
+                </button>
+              )}
             </div>
           </header>
 

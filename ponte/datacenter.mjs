@@ -62,14 +62,45 @@ export function regioneDaElenco(elenco, ip) {
   return migliore?.regione ?? null;
 }
 
-// Accetta sia { "europe-west1": { URL, RegionName } } sia un elenco di oggetti.
+// Cerca il punto di test della regione in qualsiasi forma arrivi l'elenco:
+// { "us-east4": { URL, RegionName } }, un elenco di oggetti, chiavi in minuscolo...
+// Come ultima possibilità cerca qualsiasi indirizzo https che contenga il nome della regione.
 export function puntoDiTest(endpoints, regione) {
   if (!endpoints || !regione) return null;
-  const voci = Array.isArray(endpoints) ? endpoints : Object.entries(endpoints).map(([k, v]) => ({ chiave: k, ...v }));
-  const voce = voci.find((v) => v.chiave === regione || v.Region === regione || v.region === regione);
-  const url = voce?.URL ?? voce?.url;
-  if (!url) return null;
-  return { url: String(url).replace(/\/+$/, ""), nome: voce.RegionName ?? voce.regionName ?? regione };
+  const voci = Array.isArray(endpoints)
+    ? endpoints
+    : Object.entries(endpoints).map(([k, v]) => (v && typeof v === "object" ? { chiave: k, ...v } : { chiave: k, URL: v }));
+  const campo = (o, ...nomi) => {
+    for (const n of nomi) for (const [k, v] of Object.entries(o ?? {})) if (k.toLowerCase() === n && v) return v;
+    return null;
+  };
+  const voce = voci.find((v) => v && (v.chiave === regione || campo(v, "region", "regione", "name") === regione));
+  let url = voce ? campo(voce, "url", "endpoint", "uri") : null;
+  if (!url) {
+    // ricerca profonda di un indirizzo che contenga la regione (es. https://us-east4-xxxx.a.run.app)
+    const trovati = [];
+    const visita = (x) => {
+      if (typeof x === "string") {
+        if (/^https:\/\//i.test(x) && x.toLowerCase().includes(regione.toLowerCase())) trovati.push(x);
+      } else if (x && typeof x === "object") Object.values(x).forEach(visita);
+    };
+    visita(endpoints);
+    url = trovati[0] ?? null;
+  }
+  if (!url || typeof url !== "string") return null;
+  const nome = (voce && campo(voce, "regionname", "displayname", "label")) || regione;
+  return { url: url.replace(/\/+$/, ""), nome };
+}
+
+// Breve descrizione della forma di una risposta, per il registro.
+export function formaRisposta(x) {
+  try {
+    if (Array.isArray(x)) return `elenco di ${x.length}, primo: ${JSON.stringify(x[0]).slice(0, 160)}`;
+    const chiavi = Object.keys(x ?? {});
+    return `oggetto con ${chiavi.length} chiavi (${chiavi.slice(0, 8).join(", ")}…), prima: ${JSON.stringify(x[chiavi[0]]).slice(0, 160)}`;
+  } catch {
+    return typeof x;
+  }
 }
 
 let elencoRegioni = null; // promessa in cache
@@ -108,7 +139,7 @@ export async function trovaDatacenter(ip) {
     throw new Error(`regione ${regione} trovata, ma l'elenco dei punti di test gcping non è scaricabile (${e.message})`);
   }
   const punto = puntoDiTest(ep, regione);
-  if (!punto) throw new Error(`regione ${regione} trovata, ma gcping non ha un punto di test per quella regione`);
+  if (!punto) throw new Error(`regione ${regione} trovata, ma nessun punto di test gcping per quella regione. Risposta: ${formaRisposta(ep)}`);
   return { regione, ...punto };
 }
 

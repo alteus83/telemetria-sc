@@ -39,7 +39,7 @@ const TIPI = {
  * giocoAperto: funzione che restituisce true/false/null (null = non si sa)
  * Restituisce una promessa con { porta, aggiornaConfig, chiudi, sorgenti }.
  */
-export function avviaPonte({ config, demo = false, giocoAperto = () => null, scrivi = console.log }) {
+export function avviaPonte({ config, demo = false, giocoAperto = () => null, porteGioco = () => [], scrivi = console.log }) {
   let ultimiDati = { nave: null, armi: null, personaggio: null };
   const registro = []; // ultimi eventi, il più recente per primo
 
@@ -70,6 +70,8 @@ export function avviaPonte({ config, demo = false, giocoAperto = () => null, scr
       host: cfg.telemetriaHost,
       porte: cfg.telemetriaPorte,
       portaDalLog: () => lettore.server.portaTelemetria,
+      porteGioco,
+      scrivi,
       onDati: riceviDati,
       onEvento: aggiungiEvento,
     });

@@ -34,7 +34,9 @@ function percorsoEseguibile() {
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        "(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue | Select-Object -First 1).Path",
+        // Get-Process a volte non legge il percorso (protezione anti-cheat): proviamo anche CIM.
+        "$p = (Get-Process -Name StarCitizen -ErrorAction SilentlyContinue | Select-Object -First 1).Path; " +
+          "if (-not $p) { $p = (Get-CimInstance Win32_Process -Filter \"Name='StarCitizen.exe'\" -ErrorAction SilentlyContinue | Select-Object -First 1).ExecutablePath }; $p",
       ],
       { timeout: 15000, windowsHide: true },
       (err, stdout) => risolvi(err ? null : String(stdout).trim() || null)
@@ -58,11 +60,42 @@ export function canaleDaPercorso(percorsoExe) {
   };
 }
 
+// Porte su cui il gioco sta ascoltando ed è raggiungibile da questo PC
+// (indirizzo 0.0.0.0, 127.0.0.1, :: o ::1). Tra queste potrebbe esserci la telemetria.
+export function porteInAscolto() {
+  return new Promise((risolvi) => {
+    if (process.platform !== "win32") return risolvi([]);
+    execFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$g = Get-Process -Name StarCitizen -ErrorAction SilentlyContinue; if ($g) { " +
+          "Get-NetTCPConnection -State Listen -OwningProcess $g.Id -ErrorAction SilentlyContinue | " +
+          "ForEach-Object { $_.LocalAddress + ' ' + $_.LocalPort } }",
+      ],
+      { timeout: 15000, windowsHide: true },
+      (err, stdout) => {
+        if (err) return risolvi([]);
+        const porte = new Set();
+        for (const riga of String(stdout).split(/\r?\n/)) {
+          const [indirizzo, porta] = riga.trim().split(/\s+/);
+          if (porta && ["0.0.0.0", "127.0.0.1", "::", "::1"].includes(indirizzo)) porte.add(Number(porta));
+        }
+        risolvi([...porte].filter((p) => p > 0));
+      }
+    );
+  });
+}
+
 // onCambio(aperto, info) viene chiamato solo quando lo stato cambia.
 // info = { canale, cartellaCanale, cartellaGioco, gameLog } se si è capito da dove parte.
-export function avviaControlloGioco(intervallo = 3000, onCambio) {
-  const stato = { aperto: null, info: null };
+// onPorte(porte) viene chiamato quando cambia l'elenco delle porte in ascolto del gioco.
+export function avviaControlloGioco(intervallo = 3000, onCambio, onPorte) {
+  const stato = { aperto: null, info: null, porte: [] };
   let occupato = false;
+  let giri = 0;
 
   async function controlla() {
     if (occupato) return;
@@ -72,7 +105,16 @@ export function avviaControlloGioco(intervallo = 3000, onCambio) {
       if (aperto !== stato.aperto) {
         stato.aperto = aperto;
         stato.info = aperto ? canaleDaPercorso(await percorsoEseguibile()) : null;
+        if (!aperto) stato.porte = [];
         onCambio?.(aperto, stato.info);
+      }
+      // A gioco aperto, ogni ~15 secondi ricontrolliamo le porte in ascolto.
+      if (aperto && giri++ % 5 === 0) {
+        const porte = await porteInAscolto();
+        if (porte.join(",") !== stato.porte.join(",")) {
+          stato.porte = porte;
+          onPorte?.(porte);
+        }
       }
     } finally {
       occupato = false;

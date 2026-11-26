@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { avviaPonte } from "../ponte/server.mjs";
 import { avviaControlloGioco } from "../ponte/processo.mjs";
-import { creaArchivio, percorsoGameLog, normalizzaCartella } from "./impostazioni.mjs";
+import { creaArchivio, percorsoGameLog, normalizzaCartella, canaleDaLogRecente } from "./impostazioni.mjs";
 import { creaAggiornamenti } from "./aggiornamenti.mjs";
 import { statoTelemetriaGioco, attivaTelemetriaGioco } from "./telemetria-gioco.mjs";
 import { testi, linguaEffettiva } from "./testi.mjs";
@@ -87,7 +87,8 @@ async function avvio() {
   fs.mkdirSync(cartellaDati, { recursive: true });
   fileRegistro = path.join(cartellaDati, "registro.txt");
   try {
-    fs.writeFileSync(fileRegistro, ""); // ricomincia a ogni avvio
+    // Ricomincia a ogni avvio. Il segno iniziale (BOM) fa leggere bene gli accenti anche a PowerShell 5.
+    fs.writeFileSync(fileRegistro, "\uFEFF");
   } catch {
     /* ignora */
   }
@@ -97,12 +98,12 @@ async function avvio() {
   scrivi(`Avvio. Cartella gioco: ${imp.cartellaGioco ?? "non trovata"} (${imp.versione})`);
 
   try {
-    ponte = await avviaPonte({ config: configPonte(), giocoAperto: () => gioco.aperto, scrivi });
+    ponte = await avviaPonte({ config: configPonte(), giocoAperto: () => gioco.aperto, porteGioco: () => gioco.porte ?? [], scrivi });
   } catch (e) {
     if (e.code !== "EADDRINUSE") throw e;
     // Porta occupata (es. il ponte da terminale è aperto): ne usiamo una libera.
     scrivi(`Porta ${imp.portaWeb} occupata, ne scelgo un'altra`);
-    ponte = await avviaPonte({ config: { ...configPonte(), portaWeb: 0 }, giocoAperto: () => gioco.aperto, scrivi });
+    ponte = await avviaPonte({ config: { ...configPonte(), portaWeb: 0 }, giocoAperto: () => gioco.aperto, porteGioco: () => gioco.porte ?? [], scrivi });
   }
   scrivi(`Motore avviato sulla porta ${ponte.porta}`);
 
@@ -122,16 +123,38 @@ async function avvio() {
       scrivi(`Avviato dalla cartella ${info.cartellaCanale} (canale ${info.canale})`);
       applicaCanaleRilevato(info);
     } else if (aperto) {
-      scrivi("Non sono riuscito a capire da quale cartella è partito il gioco");
+      scrivi("Percorso del gioco non leggibile: riconosco LIVE/PTU dal Game.log appena creato");
+      cercaCanaleDalLog();
     }
     aggiornaTray();
     if (!imp.aperturaAutomatica) return;
     if (aperto) apriSchermata();
     else if (aperto === false) chiudiSchermata();
-  });
+  }, (porte) => scrivi(`Porte in ascolto del gioco: ${porte.join(", ") || "nessuna"}`));
 
   // Aperta a mano (non all'accensione del PC): mostriamo le impostazioni.
   if (!process.argv.includes(ARG_NASCOSTA)) apriImpostazioni();
+}
+
+// Riserva: per circa 2 minuti dall'avvio del gioco guarda quale Game.log viene aggiornato.
+let timerCanale = null;
+function cercaCanaleDalLog() {
+  clearInterval(timerCanale);
+  let tentativi = 0;
+  timerCanale = setInterval(() => {
+    tentativi += 1;
+    const info = canaleDaLogRecente(imp.cartellaGioco, 90000);
+    if (info || tentativi > 24 || gioco.aperto === false) {
+      clearInterval(timerCanale);
+      if (info) {
+        gioco.info = info;
+        scrivi(`Canale riconosciuto dal Game.log: ${info.canale}`);
+        applicaCanaleRilevato(info);
+      } else if (gioco.aperto) {
+        scrivi("Non sono riuscito a riconoscere LIVE/PTU: uso l'ultima versione usata");
+      }
+    }
+  }, 5000);
 }
 
 // Scelta automatica: usa il canale (LIVE/PTU/...) da cui è partito il gioco.
@@ -240,7 +263,12 @@ function apriSchermata() {
     backgroundColor: "#06111f",
     show: false,
     autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      preload: path.join(cartella, "preload-schermata.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
   });
   finestraSchermata.loadURL(`http://127.0.0.1:${ponte.porta}/`);
   finestraSchermata.once("ready-to-show", () => {
@@ -248,7 +276,7 @@ function apriSchermata() {
     // Non rubiamo il focus al gioco: la mostriamo senza attivarla.
     finestraSchermata.showInactive();
   });
-  // F11 = schermo intero sì/no, Esc = esci dallo schermo intero
+  // F11 = schermo intero sì/no, Esc = esci dallo schermo intero (F2 = Impostazioni è gestito dalla pagina)
   finestraSchermata.webContents.on("before-input-event", (evento, input) => {
     if (input.type !== "keyDown") return;
     if (input.key === "F11") {
@@ -380,6 +408,11 @@ ipcMain.handle("agg:controlla", async () => {
 
 ipcMain.handle("agg:installa", () => {
   aggiornamenti.installa();
+  return true;
+});
+
+ipcMain.handle("impostazioni:apri", () => {
+  apriImpostazioni();
   return true;
 });
 

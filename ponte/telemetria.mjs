@@ -147,7 +147,10 @@ export function normalizzaFrame(f) {
 // ---------------------------------------------------------------------------
 // Connessione con nuovi tentativi automatici
 // ---------------------------------------------------------------------------
-export function avviaTelemetria({ host, porte, portaDalLog, onDati, onEvento }) {
+// porteGioco: funzione che restituisce le porte su cui il gioco sta ascoltando
+// (trovate da Windows): le proviamo insieme a quelle note.
+export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [], onDati, onEvento, scrivi = () => {} }) {
+  const giaSegnalate = new Map(); // porta -> ultimo motivo scritto nel registro
   const stato = {
     connesso: false,
     porta: null,
@@ -170,7 +173,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, onDati, onEvento }) 
 
   function prossimaPorta() {
     const dalLog = portaDalLog();
-    const elenco = dalLog ? [dalLog, ...porte.filter((p) => p !== dalLog)] : porte;
+    const elenco = [...new Set([dalLog, ...porte, ...porteGioco()].filter(Boolean))];
     const porta = elenco[indice % elenco.length];
     indice += 1;
     return porta;
@@ -209,7 +212,14 @@ export function avviaTelemetria({ host, porte, portaDalLog, onDati, onEvento }) 
       chiamata = null;
       if (!fermato) timerRiprova = setTimeout(collega, 2000);
     };
-    chiamata.on("error", (e) => riprova(e.details || e.message));
+    chiamata.on("error", (e) => {
+      const motivo = e.details || e.message;
+      if (!ricevuto && giaSegnalate.get(porta) !== motivo) {
+        giaSegnalate.set(porta, motivo);
+        scrivi(`Telemetria: porta ${porta} non risponde (${motivo})`);
+      }
+      riprova(motivo);
+    });
     chiamata.on("end", () => riprova("Flusso terminato dal gioco"));
   }
 

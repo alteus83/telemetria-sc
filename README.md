@@ -44,6 +44,10 @@ it in Settings → **Language**.
 | **Monitor** / **Full screen** | Where to show the display. On the display: **F11** full screen, **Esc** exits |
 | **Language** | AUTOMATIC / ITALIANO / ENGLISH |
 
+To reopen Settings: the **⚙ F2** button at the top right of the display (or the **F2** key), or
+right-click the icon next to the clock (on Windows 11 it may be hidden under the **^** arrow).
+The display adapts by itself to **portrait monitors** with a vertical cockpit layout.
+
 After pressing **Enable telemetry in game**, fully close the RSI Launcher (also from the icon next to
 the clock) and restart the game. Data arrives **only when your character is in the game**.
 

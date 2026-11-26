@@ -15,12 +15,16 @@ const modoDemo = process.argv.includes("--demo");
 
 const gioco = modoDemo
   ? { aperto: true }
-  : avviaControlloGioco(3000, (aperto) => {
-      if (aperto === true) console.log("Star Citizen è aperto.");
-      if (aperto === false) console.log("Star Citizen è chiuso.");
-    });
+  : avviaControlloGioco(
+      3000,
+      (aperto) => {
+        if (aperto === true) console.log("Star Citizen è aperto.");
+        if (aperto === false) console.log("Star Citizen è chiuso.");
+      },
+      (porte) => console.log(`Porte in ascolto del gioco: ${porte.join(", ") || "nessuna"}`)
+    );
 
-avviaPonte({ config, demo: modoDemo, giocoAperto: () => gioco.aperto })
+avviaPonte({ config, demo: modoDemo, giocoAperto: () => gioco.aperto, porteGioco: () => gioco.porte ?? [] })
   .then(({ porta }) => {
     console.log("============================================");
     console.log(" TELEMETRIA SC — Ponte" + (modoDemo ? " (DEMO)" : ""));

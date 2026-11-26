@@ -224,3 +224,40 @@ test("Datacenter: punto di test in forme diverse della risposta", async () => {
   assert.equal(puntoDiTest({ regioni: { qualcosa: { link: "https://us-east4-y.a.run.app/" } } }, "us-east4").url, "https://us-east4-y.a.run.app");
   assert.equal(puntoDiTest({ "us-east1": { URL: "https://us-east1-z.a.run.app" } }, "us-east4"), null);
 });
+
+test("Telemetria: una porta muta non blocca e viene diagnosticata", async () => {
+  const def = protoLoader.loadSync("sc/game/telemetry/v1/api.proto", {
+    includeDirs: [path.join(cartella, "..", "proto")], keepCase: true, enums: String,
+  });
+  const pkg = grpc.loadPackageDefinition(def).sc.game.telemetry.v1;
+  // Finto gioco: il flusso resta aperto ma non manda nulla; la lista azioni risponde.
+  const muto = new grpc.Server();
+  muto.addService(pkg.GameTelemetryService.service, {
+    TelemetryStream() {},
+    ListTriggerableActions(_c, cb) { cb(null, { actions: [{ action_name: "v_lights" }] }); },
+    TriggerGameAction(_c, cb) { cb(null, {}); },
+  });
+  const porta = await new Promise((ok, ko) =>
+    muto.bindAsync("127.0.0.1:0", grpc.ServerCredentials.createInsecure(), (e, p) => (e ? ko(e) : ok(p)))
+  );
+  const righe = [];
+  const stato = avviaTelemetria({
+    host: "127.0.0.1", porte: [porta], portaDalLog: () => null,
+    onDati: () => {}, onEvento: () => {}, scrivi: (t) => righe.push(t), attesaDati: 1000,
+  });
+  await new Promise((r) => setTimeout(r, 4500));
+  stato.ferma();
+  muto.forceShutdown();
+  assert.ok(righe.some((t) => t.includes("nessun dato") && t.includes("è il servizio di telemetria")), righe.join("\n"));
+  assert.ok(righe.some((t) => t.includes("resto sulla porta")), righe.join("\n"));
+});
+
+test("Telemetria: diagnosi di una porta che non è gRPC", async () => {
+  const net = await import("node:net");
+  const { diagnosticaPorta } = await import("../telemetria.mjs");
+  const srv = net.createServer((s) => { s.on("error", () => {}); s.once("data", () => s.end("HTTP/1.1 400 Bad Request\r\n\r\n")); });
+  await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+  const d = await diagnosticaPorta("127.0.0.1", srv.address().port);
+  srv.close();
+  assert.equal(d.tipo, "altro");
+});

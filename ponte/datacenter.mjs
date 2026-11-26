@@ -10,28 +10,44 @@
 import https from "node:https";
 
 const URL_REGIONI = "https://www.gstatic.com/ipranges/cloud.json";
-const URL_GCPING = "https://global.gcping.com/api/endpoints";
+// Più indirizzi possibili per l'elenco dei punti di test (il servizio può cambiarli).
+const URL_GCPING = ["https://global.gcping.com/api/endpoints", "https://gcping.com/api/endpoints"];
 
 const agente = new https.Agent({ keepAlive: true, maxSockets: 1 });
 
-function scaricaJson(url) {
+// Inizio dell'ultima risposta ricevuta (solo per il registro, in caso di problemi)
+let ultimaRisposta = null;
+
+function scaricaJson(url, salti = 3) {
   return new Promise((risolvi, rifiuta) => {
-    const req = https.get(url, { timeout: 8000 }, (res) => {
-      if (res.statusCode !== 200) {
-        res.resume();
-        return rifiuta(new Error(`${url}: risposta ${res.statusCode}`));
-      }
-      let testo = "";
-      res.setEncoding("utf8");
-      res.on("data", (c) => (testo += c));
-      res.on("end", () => {
-        try {
-          risolvi(JSON.parse(testo));
-        } catch (e) {
-          rifiuta(e);
+    const req = https.get(
+      url,
+      { timeout: 8000, headers: { Accept: "application/json", "User-Agent": "TelemetriaSC" } },
+      (res) => {
+        // Segue i reindirizzamenti (301, 302, 307, 308)
+        if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && salti > 0) {
+          res.resume();
+          return risolvi(scaricaJson(new URL(res.headers.location, url).toString(), salti - 1));
         }
-      });
-    });
+        if (res.statusCode !== 200) {
+          res.resume();
+          return rifiuta(new Error(`${url}: risposta ${res.statusCode}`));
+        }
+        let testo = "";
+        res.setEncoding("utf8");
+        res.on("data", (c) => (testo += c));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(testo);
+            // Teniamo l'inizio del testo originale per il registro, in caso di problemi
+            ultimaRisposta = { url, inizio: testo.slice(0, 200) };
+            risolvi(json);
+          } catch (e) {
+            rifiuta(new Error(`${url}: risposta non JSON (${testo.slice(0, 120).replace(/\s+/g, " ")})`));
+          }
+        });
+      }
+    );
     req.on("timeout", () => req.destroy(new Error("tempo scaduto")));
     req.on("error", rifiuta);
   });
@@ -95,11 +111,14 @@ export function puntoDiTest(endpoints, regione) {
 // Breve descrizione della forma di una risposta, per il registro.
 export function formaRisposta(x) {
   try {
-    if (Array.isArray(x)) return `elenco di ${x.length}, primo: ${JSON.stringify(x[0]).slice(0, 160)}`;
-    const chiavi = Object.keys(x ?? {});
-    return `oggetto con ${chiavi.length} chiavi (${chiavi.slice(0, 8).join(", ")}…), prima: ${JSON.stringify(x[chiavi[0]]).slice(0, 160)}`;
-  } catch {
-    return typeof x;
+    if (x == null) return String(x);
+    if (Array.isArray(x)) return `elenco di ${x.length}, primo: ${String(JSON.stringify(x[0])).slice(0, 160)}`;
+    if (typeof x !== "object") return `${typeof x}: ${String(x).slice(0, 160)}`;
+    const chiavi = Object.keys(x);
+    if (!chiavi.length) return "oggetto vuoto";
+    return `oggetto con ${chiavi.length} chiavi (${chiavi.slice(0, 8).join(", ")}…), prima: ${String(JSON.stringify(x[chiavi[0]])).slice(0, 160)}`;
+  } catch (e) {
+    return `non descrivibile (${e.message})`;
   }
 }
 
@@ -114,8 +133,23 @@ function regioni() {
   return elencoRegioni;
 }
 
+// Prova gli indirizzi in ordine e usa il primo che contiene davvero dei punti di test.
+async function primoElencoValido() {
+  const errori = [];
+  for (const url of URL_GCPING) {
+    try {
+      const json = await scaricaJson(url);
+      if (json && typeof json === "object" && Object.keys(json).length > 0) return json;
+      errori.push(`${url}: elenco vuoto (${ultimaRisposta?.inizio ?? ""})`);
+    } catch (e) {
+      errori.push(e.message);
+    }
+  }
+  throw new Error(errori.join(" | "));
+}
+
 function endpoints() {
-  elencoEndpoint ??= scaricaJson(URL_GCPING).catch((e) => {
+  elencoEndpoint ??= primoElencoValido().catch((e) => {
     elencoEndpoint = null;
     throw e;
   });

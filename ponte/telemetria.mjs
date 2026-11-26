@@ -22,6 +22,63 @@ const definizione = protoLoader.loadSync("sc/game/telemetry/v1/api.proto", {
 const pacchetto = grpc.loadPackageDefinition(definizione);
 const Servizio = pacchetto.sc.game.telemetry.v1.GameTelemetryService;
 
+// Servizio standard "reflection" (solo per la diagnosi: elenca i servizi di una porta)
+const Riflessione = ["v1", "v1alpha"].map((v) => {
+  const def = protoLoader.loadSync(`grpc/reflection/${v}/reflection.proto`, {
+    includeDirs: [path.join(cartella, "proto")],
+    keepCase: true,
+    defaults: true,
+    oneofs: true,
+  });
+  return grpc.loadPackageDefinition(def).grpc.reflection[v].ServerReflection;
+});
+
+function elencaServizi(indirizzo) {
+  const prova = (Classe) =>
+    new Promise((risolvi) => {
+      const c = new Classe(indirizzo, grpc.credentials.createInsecure());
+      const flusso = c.ServerReflectionInfo({ deadline: Date.now() + 3000 });
+      let fatto = false;
+      const fine = (v) => {
+        if (fatto) return;
+        fatto = true;
+        c.close();
+        risolvi(v);
+      };
+      flusso.on("data", (r) => fine((r.list_services_response?.service ?? []).map((x) => x.name)));
+      flusso.on("error", () => fine(null));
+      flusso.on("end", () => fine(null));
+      flusso.write({ list_services: "" });
+      flusso.end();
+    });
+  return prova(Riflessione[0]).then((r) => r ?? prova(Riflessione[1]));
+}
+
+// Capisce cosa c'è su una porta che accetta connessioni ma non manda dati.
+export async function diagnosticaPorta(host, porta) {
+  const indirizzo = `${host}:${porta}`;
+  const c = new Servizio(indirizzo, grpc.credentials.createInsecure());
+  const r = await new Promise((risolvi) =>
+    c.ListTriggerableActions({}, { deadline: Date.now() + 3000 }, (err, risposta) => risolvi({ err, risposta }))
+  );
+  c.close();
+  if (!r.err) {
+    return { tipo: "telemetria", testo: `è il servizio di telemetria (${r.risposta?.actions?.length ?? 0} azioni disponibili)` };
+  }
+  if (r.err.code === grpc.status.UNIMPLEMENTED) {
+    const servizi = await elencaServizi(indirizzo);
+    const conosciuto = servizi?.some((n) => /GameTelemetryService/i.test(n));
+    if (conosciuto) return { tipo: "telemetria", testo: `è il servizio di telemetria (servizi: ${servizi.join(", ")})` };
+    return {
+      tipo: "grpc",
+      testo: servizi
+        ? `è un server gRPC ma senza il servizio di telemetria conosciuto; servizi: ${servizi.join(", ") || "nessuno"}`
+        : "è un server gRPC ma non dice quali servizi offre (forse la telemetria con un nome diverso)",
+    };
+  }
+  return { tipo: "altro", testo: `non è un servizio gRPC (${r.err.details || r.err.message})` };
+}
+
 // ---------------------------------------------------------------------------
 // Conversione dei dati grezzi in un formato semplice per lo schermo
 // ---------------------------------------------------------------------------
@@ -149,8 +206,13 @@ export function normalizzaFrame(f) {
 // ---------------------------------------------------------------------------
 // porteGioco: funzione che restituisce le porte su cui il gioco sta ascoltando
 // (trovate da Windows): le proviamo insieme a quelle note.
-export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [], onDati, onEvento, scrivi = () => {} }) {
+// attesaDati: quanti ms aspettare i primi dati da una porta prima di passare alla successiva.
+export function avviaTelemetria({
+  host, porte, portaDalLog, porteGioco = () => [], onDati, onEvento, scrivi = () => {}, attesaDati = 8000,
+}) {
   const giaSegnalate = new Map(); // porta -> ultimo motivo scritto nel registro
+  const diagnosticate = new Set(); // porte già esaminate
+  let portaConfermata = null; // porta su cui la diagnosi ha trovato la telemetria
   const stato = {
     connesso: false,
     porta: null,
@@ -164,6 +226,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
   let client = null;
   let fermato = false;
   let timerRiprova = null;
+  let timerSorveglia = null;
 
   const timerContatore = setInterval(() => {
     stato.pacchettiAlSecondo = contatore;
@@ -172,6 +235,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
   }, 1000);
 
   function prossimaPorta() {
+    if (portaConfermata) return portaConfermata;
     const dalLog = portaDalLog();
     const elenco = [...new Set([dalLog, ...porte, ...porteGioco()].filter(Boolean))];
     const porta = elenco[indice % elenco.length];
@@ -186,8 +250,38 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
     client = new Servizio(`${host}:${porta}`, grpc.credentials.createInsecure());
     chiamata = client.TelemetryStream({});
     let ricevuto = false;
+    let ultimaAttivita = Date.now();
+
+    // Sorveglianza: una porta che accetta la connessione ma non manda dati non deve
+    // bloccare tutto. Dopo un po' la esaminiamo, lo scriviamo nel registro e passiamo oltre.
+    const sorveglia = setInterval(() => {
+      const limite = ricevuto ? 10000 : porta === portaConfermata ? 60000 : attesaDati;
+      if (Date.now() - ultimaAttivita < limite) return;
+      clearInterval(sorveglia);
+      const motivo = ricevuto ? "dati interrotti" : `connessione aperta ma nessun dato in ${Math.round(limite / 1000)} s`;
+      if (!ricevuto && !diagnosticate.has(porta)) {
+        diagnosticate.add(porta);
+        diagnosticaPorta(host, porta)
+          .then((d) => {
+            scrivi(`Telemetria: porta ${porta}: ${motivo}; ${d.testo}`);
+            if (d.tipo === "telemetria") {
+              portaConfermata = porta;
+              scrivi(`Telemetria: resto sulla porta ${porta} e aspetto i dati (il personaggio deve essere in gioco)`);
+            }
+          })
+          .catch((e) => scrivi(`Telemetria: porta ${porta}: ${motivo}; diagnosi non riuscita (${e.message})`));
+      } else if (ricevuto) {
+        scrivi(`Telemetria: porta ${porta}: ${motivo}, mi ricollego`);
+      }
+      const vecchia = chiamata;
+      riprova(motivo);
+      vecchia?.on("error", () => {});
+      vecchia?.cancel();
+    }, 1000);
+    timerSorveglia = sorveglia;
 
     chiamata.on("data", (frame) => {
+      ultimaAttivita = Date.now();
       if (!ricevuto) {
         ricevuto = true;
         indice -= 1; // restiamo su questa porta ai prossimi tentativi
@@ -205,6 +299,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
     const riprova = (motivo) => {
       if (chiusa) return; // "error" ed "end" possono arrivare entrambi
       chiusa = true;
+      clearInterval(sorveglia);
       if (stato.connesso && ricevuto) onEvento?.({ k: "telemetriaPersa" });
       stato.connesso = false;
       stato.errore = motivo;
@@ -214,6 +309,8 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
     };
     chiamata.on("error", (e) => {
       const motivo = e.details || e.message;
+      // La porta confermata non risponde più (gioco chiuso o riavviato): ricominciamo a cercare.
+      if (porta === portaConfermata && /ECONNREFUSED|UNAVAILABLE/i.test(motivo)) portaConfermata = null;
       if (!ricevuto && giaSegnalate.get(porta) !== motivo) {
         giaSegnalate.set(porta, motivo);
         scrivi(`Telemetria: porta ${porta} non risponde (${motivo})`);
@@ -226,6 +323,7 @@ export function avviaTelemetria({ host, porte, portaDalLog, porteGioco = () => [
   collega();
   stato.ferma = () => {
     fermato = true;
+    clearInterval(timerSorveglia);
     clearInterval(timerContatore);
     clearTimeout(timerRiprova);
     chiamata?.removeAllListeners();
